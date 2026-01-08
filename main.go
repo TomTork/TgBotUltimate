@@ -2,6 +2,7 @@ package main
 
 import (
 	"TgBotUltimate/platform"
+	"TgBotUltimate/server"
 	"context"
 	"github.com/joho/godotenv"
 	"golang.org/x/sync/errgroup"
@@ -19,6 +20,9 @@ func main() {
 
 	g.Go(func() error {
 		return platform.Platform(ctx)
+	})
+	g.Go(func() error {
+		return server.RunHTTP()
 	})
 	//g.Go(func() error {
 	//	// ...
