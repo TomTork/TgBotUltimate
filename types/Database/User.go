@@ -2,7 +2,9 @@ package Database
 
 type User struct {
 	TgId        uint64
-	Name        string
+	UserName    string
+	FirstName   string
+	LastName    string
 	PhoneNumber string
 	Email       string
 }

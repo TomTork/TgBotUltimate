@@ -1,6 +1,7 @@
 package main
 
 import (
+	db "TgBotUltimate/database"
 	"TgBotUltimate/platform"
 	"TgBotUltimate/server"
 	"context"
@@ -23,6 +24,10 @@ func main() {
 	})
 	g.Go(func() error {
 		return server.RunHTTP()
+	})
+	g.Go(func() error {
+		_, err := db.NewDatabase(ctx)
+		return err
 	})
 	//g.Go(func() error {
 	//	// ...

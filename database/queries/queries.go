@@ -3,13 +3,16 @@ package queries
 import (
 	"TgBotUltimate/database/queries/helper"
 	"fmt"
+	"log"
 	"strings"
 )
 
 const CreateUsersTable = `
 CREATE TABLE IF NOT EXISTS users (
 	tg_id BIGINT PRIMARY KEY,
-	name VARCHAR(255),
+	username VARCHAR(255),
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
 	phone_number VARCHAR(12),
 	email VARCHAR(255)
 );
@@ -35,6 +38,21 @@ func Get(tableName string, idName string, id uint64) string {
 	`, tableName, idName, id)
 }
 
+func GetOneByMinValue(tableName string, idName string, minValue string) string {
+	log.Println(fmt.Sprintf(`
+		SELECT DISTINCT ON (%s)
+    		*
+		FROM %s
+		ORDER BY %s, %s ASC LIMIT 1;
+	`, idName, tableName, idName, minValue))
+	return fmt.Sprintf(`
+		SELECT DISTINCT ON (%s)
+    		*
+		FROM %s
+		ORDER BY %s, %s ASC LIMIT 1;
+	`, idName, tableName, idName, minValue)
+}
+
 func Create(tableName string, fields []string, values []interface{}) string {
 	return fmt.Sprintf(`
 		INSERT INTO %s (%s) VALUES (%s);
@@ -51,4 +69,9 @@ func Update(tableName string, idName string, id uint64, fields []string, values 
 
 func Delete(tableName string, idName string, id uint64) string {
 	return fmt.Sprintf(`DELETE FROM %s WHERE %s = %d;`, tableName, idName, id)
+}
+
+func Count(tableName string, idName string, id uint64) string {
+	log.Println(fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE %s = %d;`, tableName, idName, id))
+	return fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE %s = %d;`, tableName, idName, id)
 }

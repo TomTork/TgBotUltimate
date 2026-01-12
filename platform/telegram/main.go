@@ -1,11 +1,16 @@
 package telegram
 
 import (
+	db "TgBotUltimate/database"
+	"TgBotUltimate/database/messages"
+	"TgBotUltimate/database/users"
+	"TgBotUltimate/types/Database"
 	"context"
 	"fmt"
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
 	"os"
+	"strings"
 )
 
 func Telegram(ctx context.Context, botToken string) error {
@@ -28,7 +33,36 @@ func Telegram(ctx context.Context, botToken string) error {
 				return nil
 			}
 			if update.Message != nil {
-				_, err := bot.SendMessage(ctx, tu.Message(tu.ID(update.Message.Chat.ID), update.Message.Text))
+				database, _ := db.NewDatabase(ctx)
+				err = users.CreateUser(
+					database,
+					Database.User{
+						TgId:        uint64(update.Message.From.ID),
+						UserName:    update.Message.From.Username,
+						FirstName:   update.Message.From.FirstName,
+						LastName:    update.Message.From.LastName,
+						PhoneNumber: "",
+						Email:       "",
+					})
+				err = messages.CreateMessage(database, Database.ChatMessage{TgId: uint64(update.Message.From.ID), Message: update.Message.Text})
+				if err != nil {
+					return err
+				}
+				_messages, _ := messages.GetMessagesByTgId(database, uint64(update.Message.From.ID))
+				__messages := make([]string, 0, len(_messages))
+				for _, message := range _messages {
+					__messages = append(__messages, message.Message)
+				}
+				_, err = bot.SendMessage(
+					ctx,
+					tu.Message(
+						tu.ID(update.Message.Chat.ID),
+						fmt.Sprintf("%d\nТвой текст запроса:\n%s\nПредыдущие запросы:\n\n%s",
+							update.Message.From.ID,
+							update.Message.Text,
+							strings.Join(__messages, "\n"),
+						),
+					))
 				if err != nil {
 					return err
 				}
