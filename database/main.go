@@ -23,12 +23,31 @@ func NewDatabase(ctx context.Context) (*Database.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	pool.QueryRow(ctx, queries.CreateUsersTable)
-	pool.QueryRow(ctx, queries.CreateMessagesTable)
+
+	stmts := []string{
+		queries.CreateUsersTable,
+		queries.CreateMessagesTable,
+		queries.CreateProjectsTable,
+		queries.CreateProjectsInfoTable,
+		queries.CreateBuildingsTable,
+		queries.CreateFlatsTable,
+		queries.CreateTagsTable,
+		queries.CreateMessagesTgIdCreatedAtIndex,
+		queries.CreateBuildingsIndex,
+		queries.CreateFlatsIndex,
+		queries.CreateTagsIndex,
+		queries.CreateInfoIndex,
+	}
+
+	for _, stmt := range stmts {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			pool.Close()
+			return nil, err
+		}
+	}
 
 	return &Database.DB{
-		Pool:    pool,
-		Context: ctx,
+		Pool: pool,
 	}, nil
 }
 

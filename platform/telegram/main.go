@@ -1,7 +1,6 @@
 package telegram
 
 import (
-	db "TgBotUltimate/database"
 	"TgBotUltimate/database/messages"
 	"TgBotUltimate/database/users"
 	"TgBotUltimate/types/Database"
@@ -13,7 +12,7 @@ import (
 	"strings"
 )
 
-func Telegram(ctx context.Context, botToken string) error {
+func Telegram(ctx context.Context, botToken string, database *Database.DB) error {
 	bot, err := telego.NewBot(botToken)
 	if err != nil {
 		fmt.Println(err)
@@ -29,43 +28,45 @@ func Telegram(ctx context.Context, botToken string) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case update, ok := <-updates:
-			if !ok || update.Message == nil {
+			if !ok {
 				return nil
 			}
-			if update.Message != nil {
-				database, _ := db.NewDatabase(ctx)
-				err = users.CreateUser(
-					database,
-					Database.User{
-						TgId:        uint64(update.Message.From.ID),
-						UserName:    update.Message.From.Username,
-						FirstName:   update.Message.From.FirstName,
-						LastName:    update.Message.From.LastName,
-						PhoneNumber: "",
-						Email:       "",
-					})
-				err = messages.CreateMessage(database, Database.ChatMessage{TgId: uint64(update.Message.From.ID), Message: update.Message.Text})
-				if err != nil {
-					return err
-				}
-				_messages, _ := messages.GetMessagesByTgId(database, uint64(update.Message.From.ID))
-				__messages := make([]string, 0, len(_messages))
-				for _, message := range _messages {
-					__messages = append(__messages, message.Message)
-				}
-				_, err = bot.SendMessage(
-					ctx,
-					tu.Message(
-						tu.ID(update.Message.Chat.ID),
-						fmt.Sprintf("%d\nТвой текст запроса:\n%s\nПредыдущие запросы:\n\n%s",
-							update.Message.From.ID,
-							update.Message.Text,
-							strings.Join(__messages, "\n"),
-						),
-					))
-				if err != nil {
-					return err
-				}
+			if update.Message == nil {
+				continue
+			}
+			reqCtx := context.WithoutCancel(ctx)
+			err = users.CreateUser(
+				reqCtx,
+				database,
+				Database.User{
+					TgId:        uint64(update.Message.From.ID),
+					UserName:    update.Message.From.Username,
+					FirstName:   update.Message.From.FirstName,
+					LastName:    update.Message.From.LastName,
+					PhoneNumber: "",
+					Email:       "",
+				})
+			err = messages.CreateMessage(reqCtx, database, Database.ChatMessage{TgId: uint64(update.Message.From.ID), Message: update.Message.Text})
+			if err != nil {
+				return err
+			}
+			_messages, _ := messages.GetMessagesByTgId(reqCtx, database, uint64(update.Message.From.ID))
+			__messages := make([]string, 0, len(_messages))
+			for _, message := range _messages {
+				__messages = append(__messages, message.Message)
+			}
+			_, err = bot.SendMessage(
+				ctx,
+				tu.Message(
+					tu.ID(update.Message.Chat.ID),
+					fmt.Sprintf("%d\nТвой текст запроса:\n%s\nПредыдущие запросы:\n\n%s",
+						update.Message.From.ID,
+						update.Message.Text,
+						strings.Join(__messages, "\n"),
+					),
+				))
+			if err != nil {
+				return err
 			}
 		}
 	}

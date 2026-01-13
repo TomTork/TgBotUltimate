@@ -3,11 +3,12 @@ package users
 import (
 	"TgBotUltimate/database/queries"
 	"TgBotUltimate/types/Database"
+	"context"
 )
 
-func GetUserById(db *Database.DB, id uint64) (*Database.User, error) {
+func GetUserById(ctx context.Context, db *Database.DB, id uint64) (*Database.User, error) {
 	user := Database.User{}
-	err := db.QueryRow(db.Context, queries.Get("users", "tg_id", id)).Scan(
+	err := db.QueryRow(ctx, queries.Get("users", "tg_id", id)).Scan(
 		&user.TgId,
 		&user.UserName,
 		&user.FirstName,
@@ -21,11 +22,11 @@ func GetUserById(db *Database.DB, id uint64) (*Database.User, error) {
 	return &user, nil
 }
 
-func CreateUser(db *Database.DB, user Database.User) error {
-	existsUser, _ := GetUserById(db, user.TgId)
+func CreateUser(ctx context.Context, db *Database.DB, user Database.User) error {
+	existsUser, _ := GetUserById(ctx, db, user.TgId)
 	if existsUser == nil {
 		err := db.QueryRow(
-			db.Context,
+			ctx,
 			queries.Create(
 				"users",
 				queries.UsersFields,
@@ -39,9 +40,9 @@ func CreateUser(db *Database.DB, user Database.User) error {
 	return nil
 }
 
-func UpdateUser(db *Database.DB, user Database.User) error {
+func UpdateUser(ctx context.Context, db *Database.DB, user Database.User) error {
 	err := db.QueryRow(
-		db.Context,
+		ctx,
 		queries.Update(
 			"users",
 			"tg_id",
@@ -56,8 +57,8 @@ func UpdateUser(db *Database.DB, user Database.User) error {
 	return nil
 }
 
-func DeleteUser(db *Database.DB, id uint64) (bool, error) {
-	err := db.QueryRow(db.Context, queries.Delete("users", "tg_id", id)).Scan()
+func DeleteUser(ctx context.Context, db *Database.DB, id uint64) (bool, error) {
+	err := db.QueryRow(ctx, queries.Delete("users", "tg_id", id)).Scan()
 	if err != nil {
 		return false, err
 	}

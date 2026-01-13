@@ -3,12 +3,13 @@ package messages
 import (
 	"TgBotUltimate/database/queries"
 	"TgBotUltimate/types/Database"
+	"context"
 	"os"
 	"strconv"
 )
 
-func GetMessagesByTgId(db *Database.DB, id uint64) ([]Database.Message, error) {
-	rows, err := db.Query(db.Context, queries.Get("messages", "tg_id", id))
+func GetMessagesByTgId(ctx context.Context, db *Database.DB, id uint64) ([]Database.Message, error) {
+	rows, err := db.Query(ctx, queries.Get("messages", "tg_id", id))
 	if err != nil {
 		return nil, err
 	}
@@ -33,17 +34,17 @@ func GetMessagesByTgId(db *Database.DB, id uint64) ([]Database.Message, error) {
 	return messages, nil
 }
 
-func getCountMessagesByTgId(db *Database.DB, id uint64) (uint8, error) {
+func getCountMessagesByTgId(ctx context.Context, db *Database.DB, id uint64) (uint8, error) {
 	var count uint8
-	err := db.QueryRow(db.Context, queries.Count("messages", "tg_id", id)).Scan(&count)
+	err := db.QueryRow(ctx, queries.Count("messages", "tg_id", id)).Scan(&count)
 	if err != nil {
 		return 0, err
 	}
 	return count, nil
 }
 
-func CreateMessage(db *Database.DB, message Database.ChatMessage) error {
-	count, err := getCountMessagesByTgId(db, message.TgId)
+func CreateMessage(ctx context.Context, db *Database.DB, message Database.ChatMessage) error {
+	count, err := getCountMessagesByTgId(ctx, db, message.TgId)
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func CreateMessage(db *Database.DB, message Database.ChatMessage) error {
 	}
 	if !(count < uint8(limit)) {
 		__message := Database.Message{}
-		err = db.QueryRow(db.Context, queries.GetOneByMinValue("messages", "tg_id", "created_at")).Scan(
+		err = db.QueryRow(ctx, queries.GetOneByMinValue("messages", "tg_id", "created_at")).Scan(
 			&__message.Id,
 			&__message.TgId,
 			&__message.CreatedAt,
@@ -62,8 +63,8 @@ func CreateMessage(db *Database.DB, message Database.ChatMessage) error {
 		if err != nil {
 			return err
 		}
-		db.QueryRow(db.Context, queries.Delete("messages", "id", __message.Id))
+		db.QueryRow(ctx, queries.Delete("messages", "id", __message.Id))
 	}
-	db.QueryRow(db.Context, queries.Create("messages", queries.MessagesFields, queries.MessagesValues(message)))
+	db.QueryRow(ctx, queries.Create("messages", queries.MessagesFields, queries.MessagesValues(message)))
 	return nil
 }
