@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func HealthHandler() *chi.Mux {
+func Handler() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

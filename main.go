@@ -4,6 +4,7 @@ import (
 	db "TgBotUltimate/database"
 	"TgBotUltimate/platform"
 	"TgBotUltimate/server"
+	cron_tasks "TgBotUltimate/server/cron-tasks"
 	"context"
 	"github.com/joho/godotenv"
 	"golang.org/x/sync/errgroup"
@@ -28,6 +29,9 @@ func main() {
 	g.Go(func() error {
 		_, err := db.NewDatabase(ctx)
 		return err
+	})
+	g.Go(func() error {
+		return cron_tasks.CronTasks()
 	})
 	//g.Go(func() error {
 	//	// ...

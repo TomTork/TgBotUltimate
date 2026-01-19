@@ -14,7 +14,7 @@ func NewRouter() *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.Mount("/api", health.HealthHandler())
+	r.Mount("/api", health.Handler())
 
 	return r
 }

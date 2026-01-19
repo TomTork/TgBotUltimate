@@ -2,12 +2,13 @@ package flats
 
 import (
 	"TgBotUltimate/database/queries"
+	"TgBotUltimate/database/queries/helper"
 	"TgBotUltimate/types/Database"
 	"context"
 )
 
-func GetFlats(ctx context.Context, db *Database.DB, whereQuery string) ([]Database.Query, error) {
-	rows, err := db.Query(ctx, queries.FlatsQuery+" "+whereQuery)
+func GetFlats(ctx context.Context, db *Database.DB, data Database.FlatFilter) ([]Database.Query, error) {
+	rows, err := db.Query(ctx, queries.FlatsQuery+helper.CreateQueryForSearchFlats(data))
 	if err != nil {
 		return nil, err
 	}
