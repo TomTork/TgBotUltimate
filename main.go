@@ -31,7 +31,7 @@ func main() {
 		return err
 	})
 	g.Go(func() error {
-		return cron_tasks.CronTasks()
+		return cron_tasks.CronTasks(ctx)
 	})
 	//g.Go(func() error {
 	//	// ...

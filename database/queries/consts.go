@@ -1,6 +1,9 @@
 package queries
 
-import "TgBotUltimate/types/Database"
+import (
+	"TgBotUltimate/types/Database"
+	"TgBotUltimate/types/Sync/Sync1C"
+)
 
 var UsersFields = []string{"tg_id", "username", "first_name", "last_name", "phone_number", "email"}
 var UsersValues = func(user Database.User) []interface{} {
@@ -10,4 +13,45 @@ var UsersValues = func(user Database.User) []interface{} {
 var MessagesFields = []string{"tg_id", "message"}
 var MessagesValues = func(message Database.ChatMessage) []interface{} {
 	return []interface{}{message.TgId, message.Message}
+}
+
+var ProjectsFields = []string{"code", "name"}
+var ProjectsValues = func(project Sync1C.TypeProject) []interface{} {
+	return []interface{}{project.ProjectId, project.ProjectName}
+}
+
+var BuildingsFields = []string{"code", "name", "project_code"}
+var BuildingsValues = func(building Sync1C.TTypeBuilding) []interface{} {
+	return []interface{}{building.BuildingId, building.BuildingName, building.ProjectCode}
+}
+
+var ApartmentsFields = []string{
+	"code",
+	"building_code",
+	"flat_number",
+	"rooms_amount",
+	"floor",
+	"total_square",
+	"living_square",
+	"cost",
+	"flat_img",
+	"floor_img",
+	"status",
+	"place_type",
+}
+var ApartmentsValues = func(apartment Sync1C.TTypeApartment) []interface{} {
+	return []interface{}{
+		apartment.ApartmentId,
+		apartment.BuildingCode,
+		apartment.Number,
+		apartment.RoomsAmount,
+		apartment.Floor,
+		apartment.TotalSquare,
+		apartment.LivingSquare,
+		apartment.PriceTotal,
+		apartment.FlatPlanImg,
+		apartment.FloorPlanImg,
+		apartment.Status,
+		apartment.Type,
+	}
 }

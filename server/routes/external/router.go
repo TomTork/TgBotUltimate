@@ -13,7 +13,7 @@ func Handler() *chi.Mux {
 	r.Post("/sync", func(w http.ResponseWriter, r *http.Request) {
 		switch os.Getenv("SYNC") {
 		case "FEED":
-			_, err := w.Write([]byte(core.Feed()))
+			_, err := w.Write([]byte(core.Feed(r.Context())))
 			if err != nil {
 				return
 			}

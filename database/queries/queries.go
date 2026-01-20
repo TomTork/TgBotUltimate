@@ -133,6 +133,12 @@ func Get(tableName string, idName string, id uint64) string {
 	`, tableName, idName, id)
 }
 
+func GetS(tableName string, idName string, id string) string {
+	return fmt.Sprintf(`
+		SELECT * FROM %s WHERE %s = '%s';
+	`, tableName, idName, id)
+}
+
 func GetOneByMinValue(tableName string, idName string, minValue string) string {
 	return fmt.Sprintf(`
 		SELECT DISTINCT ON (%s)
@@ -153,6 +159,14 @@ func Update(tableName string, idName string, id uint64, fields []string, values 
 		UPDATE %s
 		SET %s
 		WHERE %s = %d;
+	`, tableName, helper.ConvertValuesToSQLUpdate(fields, values), idName, id)
+}
+
+func UpdateS(tableName string, idName string, id string, fields []string, values []interface{}) string {
+	return fmt.Sprintf(`
+		UPDATE %s
+		SET %s
+		WHERE %s = '%s';
 	`, tableName, helper.ConvertValuesToSQLUpdate(fields, values), idName, id)
 }
 

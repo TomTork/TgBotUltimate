@@ -1,11 +1,12 @@
 package cron_tasks
 
 import (
+	"TgBotUltimate/server/routes/external/core"
+	"context"
 	"github.com/go-co-op/gocron/v2"
-	"log"
 )
 
-func CronTasks() error {
+func CronTasks(ctx context.Context) error {
 	s, _ := gocron.NewScheduler()
 
 	_, err := s.NewJob(
@@ -15,7 +16,7 @@ func CronTasks() error {
 		),
 		gocron.NewTask(
 			func() {
-				log.Println("running...")
+				core.Feed(ctx)
 			},
 		),
 	)
