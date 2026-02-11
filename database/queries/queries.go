@@ -127,6 +127,10 @@ LEFT JOIN tags t ON t.flat_code = f.code
 LEFT JOIN info i ON i.project_code = p.code
 `
 
+func GetAll(tableName string) string {
+	return fmt.Sprintf(`SELECT * FROM %s`, tableName)
+}
+
 func Get(tableName string, idName string, id uint64) string {
 	return fmt.Sprintf(`
 		SELECT * FROM %s WHERE %s = %d;

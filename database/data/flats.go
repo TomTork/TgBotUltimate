@@ -75,7 +75,7 @@ func GetFlatByCode(ctx context.Context, db *Database.DB, code string) (*Database
 
 func CreateFlat(ctx context.Context, db *Database.DB, flat Sync1C.TTypeApartment) error {
 	existsApartment, _ := GetFlatByCode(ctx, db, flat.ApartmentId)
-	if existsApartment != nil {
+	if existsApartment == nil {
 		err := db.QueryRow(
 			ctx,
 			queries.Create(

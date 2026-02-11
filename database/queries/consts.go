@@ -55,3 +55,12 @@ var ApartmentsValues = func(apartment Sync1C.TTypeApartment) []interface{} {
 		apartment.Type,
 	}
 }
+
+var TagsFields = []string{
+	"code",
+	"flat_code",
+	"name",
+}
+var TagsValues = func(tag Database.ITag) []interface{} {
+	return []interface{}{tag.Code, tag.FlatCode, tag.Name}
+}

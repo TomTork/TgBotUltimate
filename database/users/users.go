@@ -4,7 +4,41 @@ import (
 	"TgBotUltimate/database/queries"
 	"TgBotUltimate/types/Database"
 	"context"
+	"fmt"
+	"strings"
 )
+
+func SaveAllUsersDataToFile(ctx context.Context, db *Database.DB) ([]byte, error) {
+	rows, err := db.Query(ctx, queries.GetAll("users"))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users = make([]Database.User, 0)
+	for rows.Next() {
+		var user Database.User
+		err = rows.Scan(
+			&user.TgId,
+			&user.UserName,
+			&user.FirstName,
+			&user.LastName,
+			&user.PhoneNumber,
+			&user.Email,
+		)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	var __users = make([]string, len(users))
+	for _, user := range users {
+		__users = append(__users, fmt.Sprintf("%d;%s;%s;%s;%s;%s", user.TgId, user.UserName, user.FirstName, user.LastName, user.PhoneNumber, user.Email))
+	}
+	return []byte(strings.Join(__users, "\n")), nil
+}
 
 func GetUserById(ctx context.Context, db *Database.DB, id uint64) (*Database.User, error) {
 	user := Database.User{}
@@ -23,7 +57,7 @@ func GetUserById(ctx context.Context, db *Database.DB, id uint64) (*Database.Use
 }
 
 func CreateUser(ctx context.Context, db *Database.DB, user Database.User) error {
-	existsUser, _ := GetUserById(ctx, db, user.TgId)
+	existsUser, _ := GetUserById(ctx, db, *user.TgId)
 	if existsUser == nil {
 		err := db.QueryRow(
 			ctx,
@@ -46,7 +80,7 @@ func UpdateUser(ctx context.Context, db *Database.DB, user Database.User) error 
 		queries.Update(
 			"users",
 			"tg_id",
-			user.TgId,
+			*user.TgId,
 			queries.UsersFields,
 			queries.UsersValues(user),
 		),
