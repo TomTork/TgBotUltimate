@@ -49,7 +49,7 @@ func GetTagByCode(ctx context.Context, db *Database.DB, code string) (*Database.
 func CreateTag(ctx context.Context, db *Database.DB, tag Database.ITag) error {
 	existsTag, _ := GetTagByCode(ctx, db, *tag.Code)
 	if existsTag == nil {
-		err := db.QueryRow(ctx, queries.Create("tags", queries.TagsFields, queries.TagsValues(tag))).Scan()
+		_, err := db.Exec(ctx, queries.Create("tags", queries.TagsFields, queries.TagsValues(tag)))
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func CreateTag(ctx context.Context, db *Database.DB, tag Database.ITag) error {
 }
 
 func UpdateTag(ctx context.Context, db *Database.DB, tag Database.ITag) error {
-	err := db.QueryRow(ctx, queries.UpdateS("tags", "code", *tag.Code, queries.TagsFields, queries.TagsValues(tag))).Scan()
+	_, err := db.Exec(ctx, queries.UpdateS("tags", "code", *tag.Code, queries.TagsFields, queries.TagsValues(tag)))
 	if err != nil {
 		return err
 	}

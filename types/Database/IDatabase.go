@@ -10,7 +10,6 @@ type IProject struct {
 	Name          *string
 	City          *string
 	District      *string
-	Address       *string
 	AddressOffice *string
 }
 
@@ -23,11 +22,19 @@ type IProjectInfo struct {
 }
 
 type IBuilding struct {
+	Id              *uint64
+	ProjectCode     *string
+	Code            *string
+	Name            *string
+	Liter           *string
+	DeliveryDate    *string
+	BuildingAddress *string
+}
+
+type ISection struct {
 	Id           *uint64
-	ProjectCode  *string
 	Code         *string
-	Name         *string
-	Liter        *string
+	BuildingCode *string
 	SectionNum   *string
 	SectionLiter *string
 }
@@ -36,6 +43,7 @@ type IFlat struct {
 	Id           *uint64
 	Code         *string
 	BuildingCode *string
+	SectionCode  *string
 	FlatNumber   *uint32
 	RoomsAmount  *uint8
 	Floor        *uint8

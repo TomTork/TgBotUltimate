@@ -4,7 +4,7 @@ import (
 	"TgBotUltimate/database/queries"
 	"TgBotUltimate/database/queries/helper"
 	"TgBotUltimate/types/Database"
-	"TgBotUltimate/types/Sync/Sync1C"
+	"TgBotUltimate/types/Sync"
 	"context"
 )
 
@@ -55,6 +55,7 @@ func GetFlatByCode(ctx context.Context, db *Database.DB, code string) (*Database
 		&flat.Id,
 		&flat.Code,
 		&flat.BuildingCode,
+		&flat.SectionCode,
 		&flat.FlatNumber,
 		&flat.RoomsAmount,
 		&flat.Floor,
@@ -73,17 +74,17 @@ func GetFlatByCode(ctx context.Context, db *Database.DB, code string) (*Database
 	return &flat, nil
 }
 
-func CreateFlat(ctx context.Context, db *Database.DB, flat Sync1C.TTypeApartment) error {
-	existsApartment, _ := GetFlatByCode(ctx, db, flat.ApartmentId)
+func CreateFlat(ctx context.Context, db *Database.DB, flat Sync.Flat) error {
+	existsApartment, _ := GetFlatByCode(ctx, db, *flat.Code)
 	if existsApartment == nil {
-		err := db.QueryRow(
+		_, err := db.Exec(
 			ctx,
 			queries.Create(
 				"flats",
 				queries.ApartmentsFields,
 				queries.ApartmentsValues(flat),
 			),
-		).Scan()
+		)
 		if err != nil {
 			return err
 		}
@@ -91,17 +92,17 @@ func CreateFlat(ctx context.Context, db *Database.DB, flat Sync1C.TTypeApartment
 	return nil
 }
 
-func UpdateFlat(ctx context.Context, db *Database.DB, flat Sync1C.TTypeApartment) error {
-	err := db.QueryRow(
+func UpdateFlat(ctx context.Context, db *Database.DB, flat Sync.Flat) error {
+	_, err := db.Exec(
 		ctx,
 		queries.UpdateS(
 			"flats",
 			"code",
-			flat.ApartmentId,
+			*flat.Code,
 			queries.ApartmentsFields,
 			queries.ApartmentsValues(flat),
 		),
-	).Scan()
+	)
 	if err != nil {
 		return err
 	}

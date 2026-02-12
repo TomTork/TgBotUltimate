@@ -1,8 +1,9 @@
 package queries
 
 import (
+	"TgBotUltimate/database/queries/helper"
 	"TgBotUltimate/types/Database"
-	"TgBotUltimate/types/Sync/Sync1C"
+	"TgBotUltimate/types/Sync"
 )
 
 var UsersFields = []string{"tg_id", "username", "first_name", "last_name", "phone_number", "email"}
@@ -16,13 +17,18 @@ var MessagesValues = func(message Database.ChatMessage) []interface{} {
 }
 
 var ProjectsFields = []string{"code", "name"}
-var ProjectsValues = func(project Sync1C.TypeProject) []interface{} {
-	return []interface{}{project.ProjectId, project.ProjectName}
+var ProjectsValues = func(project Sync.Project) []interface{} {
+	return []interface{}{*project.Code, *project.Name}
 }
 
-var BuildingsFields = []string{"code", "name", "project_code"}
-var BuildingsValues = func(building Sync1C.TTypeBuilding) []interface{} {
-	return []interface{}{building.BuildingId, building.BuildingName, building.ProjectCode}
+var BuildingsFields = []string{"code", "name", "project_code", "liter"}
+var BuildingsValues = func(building Sync.Building) []interface{} {
+	return []interface{}{*building.Code, *building.Name, *building.ProjectCode, *building.Liter}
+}
+
+var SectionsFields = []string{"code", "building_code", "section_num", "section_liter"}
+var SectionsValues = func(section Sync.Section) []interface{} {
+	return []interface{}{*section.Code, *section.BuildingCode, *section.SectionNum, helper.SafeNil(section.SectionLiter)}
 }
 
 var ApartmentsFields = []string{
@@ -39,20 +45,20 @@ var ApartmentsFields = []string{
 	"status",
 	"place_type",
 }
-var ApartmentsValues = func(apartment Sync1C.TTypeApartment) []interface{} {
+var ApartmentsValues = func(apartment Sync.Flat) []interface{} {
 	return []interface{}{
-		apartment.ApartmentId,
-		apartment.BuildingCode,
-		apartment.Number,
-		apartment.RoomsAmount,
-		apartment.Floor,
-		apartment.TotalSquare,
-		apartment.LivingSquare,
-		apartment.PriceTotal,
-		apartment.FlatPlanImg,
-		apartment.FloorPlanImg,
-		apartment.Status,
-		apartment.Type,
+		*apartment.Code,
+		*apartment.BuildingCode,
+		helper.SafeNil(apartment.FlatNumber),
+		helper.SafeNil(apartment.RoomsAmount),
+		helper.SafeNil(apartment.Floor),
+		helper.SafeNil(apartment.TotalSquare),
+		helper.SafeNil(apartment.LivingSquare),
+		helper.SafeNil(apartment.Cost),
+		helper.SafeNil(apartment.FlatImg),
+		helper.SafeNil(apartment.FloorImg),
+		helper.SafeNil(apartment.Status),
+		helper.SafeNil(apartment.PlaceType),
 	}
 }
 
@@ -62,5 +68,5 @@ var TagsFields = []string{
 	"name",
 }
 var TagsValues = func(tag Database.ITag) []interface{} {
-	return []interface{}{tag.Code, tag.FlatCode, tag.Name}
+	return []interface{}{*tag.Code, *tag.FlatCode, *tag.Name}
 }

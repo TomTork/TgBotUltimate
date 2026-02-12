@@ -38,7 +38,6 @@ CREATE TABLE IF NOT EXISTS projects (
     name VARCHAR(255),
     city VARCHAR(63),
     district VARCHAR(63),
-    address VARCHAR(255),
     address_office VARCHAR(255)
 );
 `
@@ -65,11 +64,26 @@ CREATE TABLE IF NOT EXISTS buildings (
     code VARCHAR(63) UNIQUE NOT NULL,
     name VARCHAR(255),
     liter VARCHAR(3),
-    section_num VARCHAR(3),
-    section_liter VARCHAR(3),
+    delivery_date DATE,
+    building_address VARCHAR(255),
     CONSTRAINT fk_project
     	FOREIGN KEY (project_code)
     	REFERENCES projects(code)
+    	ON DELETE CASCADE
+    	ON UPDATE CASCADE
+);
+`
+
+const CreateSectionsTable = `
+CREATE TABLE IF NOT EXISTS sections (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(63) UNIQUE NOT NULL,
+    building_code VARCHAR(63),
+    section_num VARCHAR(3),
+    section_liter VARCHAR(3),
+    CONSTRAINT fk_building
+    	FOREIGN KEY (building_code)
+    	REFERENCES buildings(code)
     	ON DELETE CASCADE
     	ON UPDATE CASCADE
 );
@@ -80,6 +94,7 @@ CREATE TABLE IF NOT EXISTS flats (
     id SERIAL PRIMARY KEY,
     code VARCHAR(63) UNIQUE NOT NULL,
     building_code VARCHAR(63),
+    section_code VARCHAR(63),
     flat_number INTEGER,
     rooms_amount INTEGER,
     floor INTEGER,
@@ -94,6 +109,11 @@ CREATE TABLE IF NOT EXISTS flats (
     CONSTRAINT fk_building
     	FOREIGN KEY (building_code)
 	    REFERENCES buildings(code)
+    	ON DELETE CASCADE
+    	ON UPDATE CASCADE,
+    CONSTRAINT fk_section
+    	FOREIGN KEY (section_code)
+    	REFERENCES sections(code)
     	ON DELETE CASCADE
     	ON UPDATE CASCADE
 );

@@ -40,9 +40,9 @@ func SaveAllUsersDataToFile(ctx context.Context, db *Database.DB) ([]byte, error
 	return []byte(strings.Join(__users, "\n")), nil
 }
 
-func GetUserById(ctx context.Context, db *Database.DB, id uint64) (*Database.User, error) {
+func GetUserById(ctx context.Context, db *Database.DB, id int64) (*Database.User, error) {
 	user := Database.User{}
-	err := db.QueryRow(ctx, queries.Get("users", "tg_id", id)).Scan(
+	err := db.QueryRow(ctx, queries.Get("users", "tg_id", uint64(id))).Scan(
 		&user.TgId,
 		&user.UserName,
 		&user.FirstName,
@@ -80,7 +80,7 @@ func UpdateUser(ctx context.Context, db *Database.DB, user Database.User) error 
 		queries.Update(
 			"users",
 			"tg_id",
-			*user.TgId,
+			uint64(*user.TgId),
 			queries.UsersFields,
 			queries.UsersValues(user),
 		),

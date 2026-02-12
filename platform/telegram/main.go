@@ -39,12 +39,12 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 				reqCtx,
 				database,
 				Database.User{
-					TgId:        uint64(update.Message.From.ID),
-					UserName:    update.Message.From.Username,
-					FirstName:   update.Message.From.FirstName,
-					LastName:    update.Message.From.LastName,
-					PhoneNumber: "",
-					Email:       "",
+					TgId:        &update.Message.From.ID,
+					UserName:    &update.Message.From.Username,
+					FirstName:   &update.Message.From.FirstName,
+					LastName:    &update.Message.From.LastName,
+					PhoneNumber: nil,
+					Email:       nil,
 				})
 			err = messages.CreateMessage(reqCtx, database, Database.ChatMessage{TgId: uint64(update.Message.From.ID), Message: update.Message.Text})
 			if err != nil {

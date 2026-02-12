@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"TgBotUltimate/server/routes/health"
+	"TgBotUltimate/server/routes/handler"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"time"
@@ -14,7 +14,7 @@ func NewRouter() *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.Mount("/api", health.Handler())
+	r.Mount("/api", handler.Handler())
 
 	return r
 }

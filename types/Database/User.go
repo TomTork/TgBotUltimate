@@ -1,7 +1,7 @@
 package Database
 
 type User struct {
-	TgId        *uint64
+	TgId        *int64
 	UserName    *string
 	FirstName   *string
 	LastName    *string

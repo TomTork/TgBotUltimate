@@ -30,6 +30,7 @@ func NewDatabase(ctx context.Context) (*Database.DB, error) {
 		queries.CreateProjectsTable,
 		queries.CreateProjectsInfoTable,
 		queries.CreateBuildingsTable,
+		queries.CreateSectionsTable,
 		queries.CreateFlatsTable,
 		queries.CreateTagsTable,
 		queries.CreateMessagesTgIdCreatedAtIndex,

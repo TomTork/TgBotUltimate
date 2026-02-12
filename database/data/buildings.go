@@ -3,7 +3,7 @@ package data
 import (
 	"TgBotUltimate/database/queries"
 	"TgBotUltimate/types/Database"
-	"TgBotUltimate/types/Sync/Sync1C"
+	"TgBotUltimate/types/Sync"
 	"context"
 )
 
@@ -15,8 +15,8 @@ func GetBuildingByCode(ctx context.Context, db *Database.DB, code string) (*Data
 		&building.Code,
 		&building.Name,
 		&building.Liter,
-		&building.SectionNum,
-		&building.SectionLiter,
+		&building.DeliveryDate,
+		&building.BuildingAddress,
 	)
 	if err != nil {
 		return nil, err
@@ -24,17 +24,17 @@ func GetBuildingByCode(ctx context.Context, db *Database.DB, code string) (*Data
 	return &building, nil
 }
 
-func CreateBuilding(ctx context.Context, db *Database.DB, building Sync1C.TTypeBuilding) error {
-	existsBuilding, _ := GetBuildingByCode(ctx, db, building.BuildingId)
-	if existsBuilding != nil {
-		err := db.QueryRow(
+func CreateBuilding(ctx context.Context, db *Database.DB, building Sync.Building) error {
+	existsBuilding, _ := GetBuildingByCode(ctx, db, *building.Code)
+	if existsBuilding == nil {
+		_, err := db.Exec(
 			ctx,
 			queries.Create(
 				"buildings",
 				queries.BuildingsFields,
 				queries.BuildingsValues(building),
 			),
-		).Scan()
+		)
 		if err != nil {
 			return err
 		}
@@ -42,17 +42,17 @@ func CreateBuilding(ctx context.Context, db *Database.DB, building Sync1C.TTypeB
 	return nil
 }
 
-func UpdateBuilding(ctx context.Context, db *Database.DB, building Sync1C.TTypeBuilding) error {
-	err := db.QueryRow(
+func UpdateBuilding(ctx context.Context, db *Database.DB, building Sync.Building) error {
+	_, err := db.Exec(
 		ctx,
 		queries.UpdateS(
 			"buildings",
 			"code",
-			building.BuildingId,
+			*building.Code,
 			queries.BuildingsFields,
 			queries.BuildingsValues(building),
 		),
-	).Scan()
+	)
 	if err != nil {
 		return err
 	}
