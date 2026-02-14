@@ -3,6 +3,7 @@ package telegram
 import (
 	"TgBotUltimate/database/messages"
 	"TgBotUltimate/database/users"
+	"TgBotUltimate/processing/neuro"
 	"TgBotUltimate/types/Database"
 	"context"
 	"fmt"
@@ -59,10 +60,14 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 				ctx,
 				tu.Message(
 					tu.ID(update.Message.Chat.ID),
-					fmt.Sprintf("%d\nТвой текст запроса:\n%s\nПредыдущие запросы:\n\n%s",
+					fmt.Sprintf("%d"+
+						"\nТвой текст запроса:\n%s"+
+						"\nПредыдущие запросы:\n\n%s"+
+						"\nВыделенные переменные:\n\n%s",
 						update.Message.From.ID,
 						update.Message.Text,
 						strings.Join(__messages, "\n"),
+						neuro.Parameters(ctx, update.Message.Text),
 					),
 				))
 			if err != nil {
