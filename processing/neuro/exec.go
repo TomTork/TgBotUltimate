@@ -16,7 +16,7 @@ func Parameters(ctx context.Context, prompt string) (*Neuro.Response, error) {
 	var response Neuro.Response
 	err := helper.Post(
 		ctx,
-		fmt.Sprintf("http://localhost:%s/parse", os.Getenv("NEURO_PORT")),
+		fmt.Sprintf("http://127.0.0.1:%s/parse", os.Getenv("NEURO_PORT")),
 		nil,
 		Neuro.Request{Text: prompt},
 		&response,

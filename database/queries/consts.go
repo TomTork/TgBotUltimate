@@ -11,9 +11,27 @@ var UsersValues = func(user Database.User) []interface{} {
 	return []interface{}{user.TgId, user.UserName, user.FirstName, user.LastName, user.PhoneNumber, user.Email}
 }
 
-var MessagesFields = []string{"tg_id", "message"}
+var UserExpertSystem = []string{"ex_project_name", "ex_building_liter", "ex_floor_min", "ex_floor_max", "ex_rooms_amount_min", "ex_rooms_amount_max", "ex_square_min", "ex_square_max", "ex_cost_min", "ex_cost_max"}
+var UserExpertSystemValues = func(system Database.ExpertSystem) []interface{} {
+	return []interface{}{system.ExProjectName, system.ExBuildingLiter, system.ExFloorMin, system.ExFloorMax, system.ExRoomsAmountMin, system.ExRoomsAmountMax, system.ExSquareMin, system.ExSquareMax, system.ExCostMin, system.ExCostMax}
+}
+
+var MessagesFields = []string{"tg_id", "message", "project_name", "building_liter", "floor_min", "floor_max", "rooms_amount_min", "rooms_amount_max", "square_min", "square_max", "cost_min", "cost_max"}
 var MessagesValues = func(message Database.ChatMessage) []interface{} {
-	return []interface{}{message.TgId, message.Message}
+	return []interface{}{
+		message.TgId,
+		message.Message,
+		message.ProjectName[0:min(255, len(message.ProjectName))],
+		message.BuildingLiter[0:min(7, len(message.BuildingLiter))],
+		message.FloorMin[0:min(7, len(message.FloorMin))],
+		message.FloorMax[0:min(7, len(message.FloorMax))],
+		message.RoomsAmountMin[0:min(7, len(message.RoomsAmountMin))],
+		message.RoomsAmountMax[0:min(7, len(message.RoomsAmountMax))],
+		message.SquareMin[0:min(7, len(message.SquareMin))],
+		message.SquareMax[0:min(7, len(message.SquareMax))],
+		message.CostMin[0:min(7, len(message.CostMin))],
+		message.CostMax[0:min(7, len(message.CostMax))],
+	}
 }
 
 var ProjectsFields = []string{"code", "name"}
@@ -69,4 +87,11 @@ var TagsFields = []string{
 }
 var TagsValues = func(tag Database.ITag) []interface{} {
 	return []interface{}{*tag.Code, *tag.FlatCode, *tag.Name}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

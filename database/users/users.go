@@ -74,6 +74,23 @@ func CreateUser(ctx context.Context, db *Database.DB, user Database.User) error 
 	return nil
 }
 
+func SetExpertSystemFields(ctx context.Context, db *Database.DB, id int64, system Database.ExpertSystem) error {
+	err := db.QueryRow(
+		ctx,
+		queries.Update(
+			"users",
+			"tg_id",
+			uint64(id),
+			queries.UserExpertSystem,
+			queries.UserExpertSystemValues(system),
+		),
+	).Scan()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func UpdateUser(ctx context.Context, db *Database.DB, user Database.User) error {
 	err := db.QueryRow(
 		ctx,

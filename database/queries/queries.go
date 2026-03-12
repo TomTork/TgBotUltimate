@@ -13,7 +13,17 @@ CREATE TABLE IF NOT EXISTS users (
     first_name VARCHAR(255),
     last_name VARCHAR(255),
 	phone_number VARCHAR(12),
-	email VARCHAR(255)
+	email VARCHAR(255),
+    ex_project_name VARCHAR(255) DEFAULT '',
+    ex_building_liter VARCHAR(7) DEFAULT '',
+    ex_floor_min VARCHAR(7) DEFAULT '',
+    ex_floor_max VARCHAR(7) DEFAULT '',
+    ex_rooms_amount_min VARCHAR(7) DEFAULT '',
+    ex_rooms_amount_max VARCHAR(7) DEFAULT '',
+    ex_square_min VARCHAR(7) DEFAULT '',
+    ex_square_max VARCHAR(7) DEFAULT '',
+    ex_cost_min VARCHAR(7) DEFAULT '',
+    ex_cost_max VARCHAR(7) DEFAULT ''
 );
 `
 
@@ -23,6 +33,16 @@ CREATE TABLE IF NOT EXISTS messages (
 	tg_id BIGINT NOT NULL,
 	created_at TIMESTAMP NOT NULL DEFAULT now(),
 	message TEXT NOT NULL,
+    project_name VARCHAR(255) DEFAULT '',
+    building_liter VARCHAR(7) DEFAULT '',
+    floor_min VARCHAR(7) DEFAULT '',
+    floor_max VARCHAR(7) DEFAULT '',
+    rooms_amount_min VARCHAR(7) DEFAULT '',
+    rooms_amount_max VARCHAR(7) DEFAULT '',
+    square_min VARCHAR(7) DEFAULT '',
+    square_max VARCHAR(7) DEFAULT '',
+    cost_min VARCHAR(7) DEFAULT '',
+    cost_max VARCHAR(7) DEFAULT '',
 	CONSTRAINT fk_user
 		FOREIGN KEY (tg_id)
 		REFERENCES users(tg_id)

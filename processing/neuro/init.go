@@ -24,7 +24,6 @@ func Init(ctx context.Context) error {
 	if _, err := os.Stat(filepath.Join(projectRoot, "training", "api.py")); err != nil {
 		return fmt.Errorf("cannot find training/api.py from dir=%s: %w", projectRoot, err)
 	}
-	log.Println("project root:", projectRoot)
 	cmd := exec.CommandContext(
 		ctx,
 		"python3",

@@ -13,6 +13,7 @@ func Platform(ctx context.Context) error {
 	db, err := database.NewDatabase(ctx)
 	if err != nil {
 		log.Println("Failed to connect to database")
+		return err
 	}
 	defer database.Close(db)
 	g, ctx := errgroup.WithContext(ctx)

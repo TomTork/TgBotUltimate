@@ -10,16 +10,13 @@ import (
 	"fmt"
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
-	"log"
-	"os"
 	"strings"
 )
 
 func Telegram(ctx context.Context, botToken string, database *Database.DB) error {
 	bot, err := telego.NewBot(botToken)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return fmt.Errorf("create telegram bot: %w", err)
 	}
 	updates, err := bot.UpdatesViaLongPolling(ctx, nil)
 	if err != nil {
@@ -34,7 +31,7 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 			if !ok {
 				return nil
 			}
-			if update.Message == nil {
+			if update.Message == nil || update.Message.From == nil {
 				continue
 			}
 			reqCtx := context.WithoutCancel(ctx)
@@ -49,22 +46,39 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 					PhoneNumber: nil,
 					Email:       nil,
 				})
-			err = messages.CreateMessage(reqCtx, database, Database.ChatMessage{TgId: uint64(update.Message.From.ID), Message: update.Message.Text})
 			if err != nil {
-				return err
+				return fmt.Errorf("create telegram user: %w", err)
+			}
+			n, err := neuro.Parameters(ctx, update.Message.Text)
+			if err != nil {
+				return fmt.Errorf("parse neuro parameters: %w", err)
+			}
+			parameters, _ := json.Marshal(n)
+			err = messages.CreateMessage(
+				reqCtx,
+				database,
+				Database.ChatMessage{
+					TgId:           uint64(update.Message.From.ID),
+					Message:        update.Message.Text,
+					ProjectName:    string(n.ProjectName),
+					BuildingLiter:  string(n.BuildingLiter),
+					FloorMin:       string(n.FloorMin),
+					FloorMax:       string(n.FloorMax),
+					RoomsAmountMin: string(n.RoomsAmountMin),
+					RoomsAmountMax: string(n.RoomsAmountMax),
+					SquareMin:      string(n.SquareMin),
+					SquareMax:      string(n.SquareMax),
+					CostMin:        string(n.CostMin),
+					CostMax:        string(n.CostMax),
+				})
+			if err != nil {
+				return fmt.Errorf("create telegram message: %w", err)
 			}
 			_messages, _ := messages.GetMessagesByTgId(reqCtx, database, uint64(update.Message.From.ID))
 			__messages := make([]string, 0, len(_messages))
 			for _, message := range _messages {
 				__messages = append(__messages, message.Message)
 			}
-			n, err := neuro.Parameters(ctx, update.Message.Text)
-			_n := *n
-			log.Println(_n)
-			if err != nil {
-				return err
-			}
-			parameters, _ := json.Marshal(_n)
 			_, err = bot.SendMessage(
 				ctx,
 				tu.Message(
