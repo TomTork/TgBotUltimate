@@ -6,9 +6,11 @@ import (
 	"TgBotUltimate/processing/neuro"
 	"TgBotUltimate/types/Database"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
+	"log"
 	"os"
 	"strings"
 )
@@ -56,6 +58,13 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 			for _, message := range _messages {
 				__messages = append(__messages, message.Message)
 			}
+			n, err := neuro.Parameters(ctx, update.Message.Text)
+			_n := *n
+			log.Println(_n)
+			if err != nil {
+				return err
+			}
+			parameters, _ := json.Marshal(_n)
 			_, err = bot.SendMessage(
 				ctx,
 				tu.Message(
@@ -67,7 +76,7 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 						update.Message.From.ID,
 						update.Message.Text,
 						strings.Join(__messages, "\n"),
-						neuro.Parameters(ctx, update.Message.Text),
+						string(parameters),
 					),
 				))
 			if err != nil {

@@ -3,6 +3,7 @@ package main
 import (
 	db "TgBotUltimate/database"
 	"TgBotUltimate/platform"
+	"TgBotUltimate/processing/neuro"
 	"TgBotUltimate/server"
 	cron_tasks "TgBotUltimate/server/cron-tasks"
 	"context"
@@ -25,6 +26,11 @@ func main() {
 	var statements []string = strings.Split(os.Getenv("STATEMENTS"), ",")
 	for _, statement := range statements {
 		switch statement {
+		case "neuro":
+			g.Go(func() error {
+				return neuro.Init(ctx)
+			})
+			break
 		case "platform":
 			g.Go(func() error {
 				return platform.Platform(ctx)

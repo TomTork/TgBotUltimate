@@ -1,73 +1,63 @@
 package neuro
 
 import (
-	"TgBotUltimate/server/routes/helper"
-	"TgBotUltimate/types/Ollama"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"syscall"
+	"time"
 )
 
-func Ask(ctx context.Context, prompt string) string {
-	return ask(ctx, prompt, "qwen3-vl:4b")
-}
-
-func Parameters(ctx context.Context, prompt string) string {
-	log.Println(fmt.Sprintf(
-		"Ты должен вычленить параметры подбора недвижимости на основе информации: %s\n"+
-			"и заполнить их по форме ниже:\n"+
-			"project_name: <UNK>"+
-			"building_liter: <UNK>"+
-			"floor_min: <UNK>"+
-			"floor_max: <UNK>"+
-			"rooms_amount_min: <UNK>"+
-			"rooms_amount_max: <UNK>"+
-			"square_min: <UNK>"+
-			"square_max: <UNK>"+
-			"Вместо <UNK> подставь значения на основе запроса пользователя. "+
-			"Выведи ТОЛЬКО форму.",
-		prompt,
-	))
-	return ask(ctx,
-		fmt.Sprintf(
-			"Ты должен вычленить параметры подбора недвижимости на основе информации: %s\n"+
-				"и заполнить их по форме ниже:\n"+
-				"project_name: <UNK>"+
-				"building_liter: <UNK>"+
-				"floor_min: <UNK>"+
-				"floor_max: <UNK>"+
-				"rooms_amount_min: <UNK>"+
-				"rooms_amount_max: <UNK>"+
-				"square_min: <UNK>"+
-				"square_max: <UNK>"+
-				"Вместо <UNK> подставь значения на основе запроса пользователя. "+
-				"Выведи ТОЛЬКО форму.",
-			prompt,
-		),
-		"qwen3-embedding:0.6b",
-	)
-}
-
-func ask(ctx context.Context, prompt string, model string) string {
-	var response Ollama.Response
-	err := helper.Post(
-		ctx,
-		fmt.Sprintf("http://localhost:%s/api/generate", os.Getenv("NEURO_PORT")),
-		nil,
-		Ollama.Request{
-			Model:  model,
-			Prompt: prompt,
-			Stream: false,
-			Options: map[string]interface{}{
-				"temperature": 0.7,
-			},
-		},
-		&response,
-	)
-	if err != nil {
-		return err.Error()
+func Init(ctx context.Context) error {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return fmt.Errorf("runtime.Caller failed")
 	}
-	log.Println(response)
-	return response.Response
+
+	projectRoot := filepath.Clean(filepath.Join(filepath.Dir(thisFile), "..", ".."))
+
+	if _, err := os.Stat(filepath.Join(projectRoot, "training", "api.py")); err != nil {
+		return fmt.Errorf("cannot find training/api.py from dir=%s: %w", projectRoot, err)
+	}
+	log.Println("project root:", projectRoot)
+	cmd := exec.CommandContext(
+		ctx,
+		"python3",
+		"training/api.py",
+	)
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	pid := cmd.Process.Pid
+	log.Printf("[neuro] python started pid=%d dir=%s\n", pid, projectRoot)
+
+	go func() {
+		<-ctx.Done()
+		_ = syscall.Kill(-pid, syscall.SIGTERM)
+		time.Sleep(2 * time.Second)
+		_ = syscall.Kill(-pid, syscall.SIGKILL)
+	}()
+
+	err := cmd.Wait()
+
+	if ctx.Err() != nil {
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("[neuro] python exited: %w", err)
+	}
+
+	return errors.New("[neuro] python exited unexpectedly")
 }
