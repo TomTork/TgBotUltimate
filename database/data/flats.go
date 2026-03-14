@@ -2,51 +2,52 @@ package data
 
 import (
 	"TgBotUltimate/database/queries"
-	"TgBotUltimate/database/queries/helper"
+	"TgBotUltimate/processing"
 	"TgBotUltimate/types/Database"
 	"TgBotUltimate/types/Sync"
 	"context"
 )
 
-func GetFlats(ctx context.Context, db *Database.DB, data Database.FlatFilter) ([]Database.Query, error) {
-	rows, err := db.Query(ctx, queries.FlatsQuery+helper.CreateQueryForSearchFlats(data))
+func GetFlatsByParameters(ctx context.Context, db *Database.DB, user *Database.User) ([]Database.Query, error) {
+	summarize, err := processing.Summarize(ctx, db, uint64(*user.TgId))
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.Query(ctx, queries.FlatsQuery+processing.Converter(summarize, user))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	qs := make([]Database.Query, 0)
+	flats := make([]Database.Query, 0)
 	for rows.Next() {
 		var query Database.Query
 		err = rows.Scan(
 			&query.ProjectName,
 			&query.City,
 			&query.District,
-			&query.Address,
 			&query.AddressOffice,
+			&query.BuildingAddress,
 			&query.BuildingName,
 			&query.FlatNumber,
-			&query.LivingSquare,
-			&query.TotalSquare,
 			&query.RoomsAmount,
 			&query.Floor,
+			&query.TotalSquare,
+			&query.LivingSquare,
 			&query.Cost,
 			&query.FlatImg,
 			&query.FloorImg,
 			&query.Path,
-			&query.Status,
 			&query.PlaceType,
-			&query.Infos,
-			&query.Tags,
 		)
 		if err != nil {
 			return nil, err
 		}
-		qs = append(qs, query)
+		flats = append(flats, query)
 	}
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	return qs, nil
+	return flats, nil
 }
 
 func GetFlatByCode(ctx context.Context, db *Database.DB, code string) (*Database.IFlat, error) {

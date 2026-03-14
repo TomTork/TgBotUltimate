@@ -8,7 +8,33 @@ import (
 
 var UsersFields = []string{"tg_id", "username", "first_name", "last_name", "phone_number", "email"}
 var UsersValues = func(user Database.User) []interface{} {
-	return []interface{}{user.TgId, user.UserName, user.FirstName, user.LastName, user.PhoneNumber, user.Email}
+	var username, firstname, lastname, phoneNumber, email string
+	if user.UserName != nil {
+		username = *user.UserName
+	} else {
+		username = ""
+	}
+	if user.FirstName != nil {
+		firstname = *user.FirstName
+	} else {
+		firstname = ""
+	}
+	if user.LastName != nil {
+		lastname = *user.LastName
+	} else {
+		lastname = ""
+	}
+	if user.PhoneNumber != nil {
+		phoneNumber = *user.PhoneNumber
+	} else {
+		phoneNumber = ""
+	}
+	if user.Email != nil {
+		email = *user.Email
+	} else {
+		email = ""
+	}
+	return []interface{}{*user.TgId, username, firstname, lastname, phoneNumber, email}
 }
 
 var UserExpertSystem = []string{"ex_project_name", "ex_building_liter", "ex_floor_min", "ex_floor_max", "ex_rooms_amount_min", "ex_rooms_amount_max", "ex_square_min", "ex_square_max", "ex_cost_min", "ex_cost_max"}
@@ -18,6 +44,36 @@ var UserExpertSystemValues = func(system Database.ExpertSystem) []interface{} {
 
 var MessagesFields = []string{"tg_id", "message", "project_name", "building_liter", "floor_min", "floor_max", "rooms_amount_min", "rooms_amount_max", "square_min", "square_max", "cost_min", "cost_max"}
 var MessagesValues = func(message Database.ChatMessage) []interface{} {
+	if message.ProjectName == "<UNK>" {
+		message.ProjectName = ""
+	}
+	if message.BuildingLiter == "<UNK>" {
+		message.BuildingLiter = ""
+	}
+	if message.FloorMin == "<UNK>" {
+		message.FloorMin = ""
+	}
+	if message.FloorMax == "<UNK>" {
+		message.FloorMax = ""
+	}
+	if message.RoomsAmountMin == "<UNK>" {
+		message.RoomsAmountMin = ""
+	}
+	if message.RoomsAmountMax == "<UNK>" {
+		message.RoomsAmountMax = ""
+	}
+	if message.SquareMin == "<UNK>" {
+		message.SquareMin = ""
+	}
+	if message.SquareMax == "<UNK>" {
+		message.SquareMax = ""
+	}
+	if message.CostMin == "<UNK>" {
+		message.CostMin = ""
+	}
+	if message.CostMax == "<UNK>" {
+		message.CostMax = ""
+	}
 	return []interface{}{
 		message.TgId,
 		message.Message,

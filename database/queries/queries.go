@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
     ex_square_min VARCHAR(7) DEFAULT '',
     ex_square_max VARCHAR(7) DEFAULT '',
     ex_cost_min VARCHAR(7) DEFAULT '',
-    ex_cost_max VARCHAR(7) DEFAULT ''
+    ex_cost_max VARCHAR(7) DEFAULT '',
+    uoffset INTEGER DEFAULT 0
 );
 `
 
@@ -160,7 +161,24 @@ const CreateTagsIndex = `CREATE INDEX IF NOT EXISTS idx_tags_flat_code ON tags(f
 const CreateInfoIndex = `CREATE INDEX IF NOT EXISTS idx_info_project_code ON info(project_code);`
 
 const FlatsQuery = `
-SELECT * FROM flats f
+SELECT
+p.name as project_name,
+p.city,
+p.district,
+p.address_office,
+b.building_address,
+b.name as building_name,
+f.flat_number,
+f.rooms_amount,
+f.floor,
+f.total_square,
+f.living_square,
+f.cost,
+f.flat_img,
+f.floor_img,
+f.path,
+f.place_type
+FROM flats f
 LEFT JOIN buildings b ON b.code = f.building_code
 LEFT JOIN projects p ON p.code = b.project_code
 LEFT JOIN tags t ON t.flat_code = f.code
@@ -175,6 +193,12 @@ func Get(tableName string, idName string, id uint64) string {
 	return fmt.Sprintf(`
 		SELECT * FROM %s WHERE %s = %d;
 	`, tableName, idName, id)
+}
+
+func GetSort(tableName string, idName string, id uint64, sortName string, direction string) string {
+	return fmt.Sprintf(`
+		SELECT * FROM %s WHERE %s = %d ORDER BY %s %s;
+	`, tableName, idName, id, sortName, direction)
 }
 
 func GetS(tableName string, idName string, id string) string {

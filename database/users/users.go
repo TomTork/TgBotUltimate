@@ -5,6 +5,7 @@ import (
 	"TgBotUltimate/types/Database"
 	"context"
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -42,6 +43,7 @@ func SaveAllUsersDataToFile(ctx context.Context, db *Database.DB) ([]byte, error
 
 func GetUserById(ctx context.Context, db *Database.DB, id int64) (*Database.User, error) {
 	user := Database.User{}
+	log.Println("req", queries.Get("users", "tg_id", uint64(id)))
 	err := db.QueryRow(ctx, queries.Get("users", "tg_id", uint64(id))).Scan(
 		&user.TgId,
 		&user.UserName,
@@ -49,6 +51,17 @@ func GetUserById(ctx context.Context, db *Database.DB, id int64) (*Database.User
 		&user.LastName,
 		&user.PhoneNumber,
 		&user.Email,
+		&user.ExProjectName,
+		&user.ExBuildingLiter,
+		&user.ExFloorMin,
+		&user.ExFloorMax,
+		&user.ExRoomsAmountMin,
+		&user.ExRoomsAmountMax,
+		&user.ExSquareMin,
+		&user.ExSquareMax,
+		&user.ExCostMin,
+		&user.ExCostMax,
+		&user.UOffset,
 	)
 	if err != nil {
 		return nil, err
@@ -75,7 +88,11 @@ func CreateUser(ctx context.Context, db *Database.DB, user Database.User) error 
 }
 
 func SetExpertSystemFields(ctx context.Context, db *Database.DB, id int64, system Database.ExpertSystem) error {
-	err := db.QueryRow(
+	err := DropUserOffset(ctx, db, id)
+	if err != nil {
+		return err
+	}
+	err = db.QueryRow(
 		ctx,
 		queries.Update(
 			"users",
@@ -114,4 +131,36 @@ func DeleteUser(ctx context.Context, db *Database.DB, id uint64) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func DropUserOffset(ctx context.Context, db *Database.DB, id int64) error {
+	err := db.QueryRow(
+		ctx,
+		fmt.Sprintf("UPDATE users SET uoffset = 0 WHERE tg_id = %d", id),
+	).Scan()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func IncreaseUserOffset(ctx context.Context, db *Database.DB, id int64) error {
+	user, err := GetUserById(ctx, db, id)
+	log.Println("my user", *user.TgId, *user.UOffset)
+	if err != nil {
+		log.Println("get user", err)
+		return err
+	}
+	log.Println("User offset increased:", *user.UOffset, *user.UOffset+1)
+	err = db.QueryRow(
+		ctx,
+		fmt.Sprintf("UPDATE users SET uoffset = %d WHERE tg_id = %d", *user.UOffset+1, id),
+	).Scan()
+	log.Println("error:", err, fmt.Sprintf("UPDATE users SET uoffset = %d WHERE tg_id = %d", *user.UOffset+1, id))
+	user, err = GetUserById(ctx, db, id)
+	log.Println("new user", *user.TgId, *user.UOffset)
+	if err != nil {
+		return err
+	}
+	return nil
 }

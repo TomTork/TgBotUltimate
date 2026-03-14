@@ -7,6 +7,7 @@ type User struct {
 	LastName    *string
 	PhoneNumber *string
 	Email       *string
+	UOffset     *int
 	ExpertSystem
 }
 

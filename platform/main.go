@@ -12,7 +12,7 @@ import (
 func Platform(ctx context.Context) error {
 	db, err := database.NewDatabase(ctx)
 	if err != nil {
-		log.Println("Failed to connect to database")
+		log.Println("Failed to connect to database", err)
 		return err
 	}
 	defer database.Close(db)
