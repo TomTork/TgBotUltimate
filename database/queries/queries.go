@@ -15,15 +15,15 @@ CREATE TABLE IF NOT EXISTS users (
 	phone_number VARCHAR(12),
 	email VARCHAR(255),
     ex_project_name VARCHAR(255) DEFAULT '',
-    ex_building_liter VARCHAR(7) DEFAULT '',
-    ex_floor_min VARCHAR(7) DEFAULT '',
-    ex_floor_max VARCHAR(7) DEFAULT '',
-    ex_rooms_amount_min VARCHAR(7) DEFAULT '',
-    ex_rooms_amount_max VARCHAR(7) DEFAULT '',
-    ex_square_min VARCHAR(7) DEFAULT '',
-    ex_square_max VARCHAR(7) DEFAULT '',
-    ex_cost_min VARCHAR(7) DEFAULT '',
-    ex_cost_max VARCHAR(7) DEFAULT '',
+    ex_building_liter VARCHAR(255) DEFAULT '',
+    ex_floor_min VARCHAR(255) DEFAULT '',
+    ex_floor_max VARCHAR(255) DEFAULT '',
+    ex_rooms_amount_min VARCHAR(255) DEFAULT '',
+    ex_rooms_amount_max VARCHAR(255) DEFAULT '',
+    ex_square_min VARCHAR(255) DEFAULT '',
+    ex_square_max VARCHAR(255) DEFAULT '',
+    ex_cost_min VARCHAR(255) DEFAULT '',
+    ex_cost_max VARCHAR(255) DEFAULT '',
     uoffset INTEGER DEFAULT 0
 );
 `
@@ -35,15 +35,15 @@ CREATE TABLE IF NOT EXISTS messages (
 	created_at TIMESTAMP NOT NULL DEFAULT now(),
 	message TEXT NOT NULL,
     project_name VARCHAR(255) DEFAULT '',
-    building_liter VARCHAR(7) DEFAULT '',
-    floor_min VARCHAR(7) DEFAULT '',
-    floor_max VARCHAR(7) DEFAULT '',
-    rooms_amount_min VARCHAR(7) DEFAULT '',
-    rooms_amount_max VARCHAR(7) DEFAULT '',
-    square_min VARCHAR(7) DEFAULT '',
-    square_max VARCHAR(7) DEFAULT '',
-    cost_min VARCHAR(7) DEFAULT '',
-    cost_max VARCHAR(7) DEFAULT '',
+    building_liter VARCHAR(255) DEFAULT '',
+    floor_min VARCHAR(255) DEFAULT '',
+    floor_max VARCHAR(255) DEFAULT '',
+    rooms_amount_min VARCHAR(255) DEFAULT '',
+    rooms_amount_max VARCHAR(255) DEFAULT '',
+    square_min VARCHAR(255) DEFAULT '',
+    square_max VARCHAR(255) DEFAULT '',
+    cost_min VARCHAR(255) DEFAULT '',
+    cost_max VARCHAR(255) DEFAULT '',
 	CONSTRAINT fk_user
 		FOREIGN KEY (tg_id)
 		REFERENCES users(tg_id)
@@ -151,6 +151,15 @@ CREATE TABLE IF NOT EXISTS tags (
 	    REFERENCES flats(code)
     	ON DELETE CASCADE
     	ON UPDATE CASCADE
+);
+`
+
+const CreateExpertSystemTable = `
+CREATE TABLE IF NOT EXISTS expert_system (
+    id SERIAL PRIMARY KEY,
+    question VARCHAR(1023) DEFAULT '',
+    variants VARCHAR(4095) DEFAULT '',
+    results VARCHAR(8191) DEFAULT ''
 );
 `
 

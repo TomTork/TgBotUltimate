@@ -2,10 +2,12 @@ package users
 
 import (
 	"TgBotUltimate/database/queries"
+	"TgBotUltimate/database/queries/helper"
 	"TgBotUltimate/types/Database"
 	"context"
+	"errors"
 	"fmt"
-	"log"
+	"github.com/jackc/pgx/v5"
 	"strings"
 )
 
@@ -43,7 +45,6 @@ func SaveAllUsersDataToFile(ctx context.Context, db *Database.DB) ([]byte, error
 
 func GetUserById(ctx context.Context, db *Database.DB, id int64) (*Database.User, error) {
 	user := Database.User{}
-	log.Println("req", queries.Get("users", "tg_id", uint64(id)))
 	err := db.QueryRow(ctx, queries.Get("users", "tg_id", uint64(id))).Scan(
 		&user.TgId,
 		&user.UserName,
@@ -64,6 +65,9 @@ func GetUserById(ctx context.Context, db *Database.DB, id int64) (*Database.User
 		&user.UOffset,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &user, nil
@@ -72,14 +76,14 @@ func GetUserById(ctx context.Context, db *Database.DB, id int64) (*Database.User
 func CreateUser(ctx context.Context, db *Database.DB, user Database.User) error {
 	existsUser, _ := GetUserById(ctx, db, *user.TgId)
 	if existsUser == nil {
-		err := db.QueryRow(
+		_, err := db.Exec(
 			ctx,
 			queries.Create(
 				"users",
 				queries.UsersFields,
 				queries.UsersValues(user),
 			),
-		).Scan()
+		)
 		if err != nil {
 			return err
 		}
@@ -88,11 +92,64 @@ func CreateUser(ctx context.Context, db *Database.DB, user Database.User) error 
 }
 
 func SetExpertSystemFields(ctx context.Context, db *Database.DB, id int64, system Database.ExpertSystem) error {
-	err := DropUserOffset(ctx, db, id)
+	fields, values := nonEmptyExpertSystemFields(system)
+	if len(fields) == 0 {
+		return nil
+	}
+
+	changed, err := expertSystemFieldsChanged(ctx, db, id, system)
 	if err != nil {
 		return err
 	}
-	err = db.QueryRow(
+	if changed {
+		err = DropUserOffset(ctx, db, id)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = db.Exec(
+		ctx,
+		queries.Update(
+			"users",
+			"tg_id",
+			uint64(id),
+			fields,
+			values,
+		),
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ResetExpertSystemFields(ctx context.Context, db *Database.DB, id int64) error {
+	system := Database.ExpertSystem{
+		ExProjectName:    stringPtr(""),
+		ExBuildingLiter:  stringPtr(""),
+		ExFloorMin:       stringPtr(""),
+		ExFloorMax:       stringPtr(""),
+		ExRoomsAmountMin: stringPtr(""),
+		ExRoomsAmountMax: stringPtr(""),
+		ExSquareMin:      stringPtr(""),
+		ExSquareMax:      stringPtr(""),
+		ExCostMin:        stringPtr(""),
+		ExCostMax:        stringPtr(""),
+	}
+
+	changed, err := expertSystemResetChanged(ctx, db, id)
+	if err != nil {
+		return err
+	}
+	if changed {
+		err = DropUserOffset(ctx, db, id)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = db.Exec(
 		ctx,
 		queries.Update(
 			"users",
@@ -101,15 +158,12 @@ func SetExpertSystemFields(ctx context.Context, db *Database.DB, id int64, syste
 			queries.UserExpertSystem,
 			queries.UserExpertSystemValues(system),
 		),
-	).Scan()
-	if err != nil {
-		return err
-	}
-	return nil
+	)
+	return err
 }
 
 func UpdateUser(ctx context.Context, db *Database.DB, user Database.User) error {
-	err := db.QueryRow(
+	_, err := db.Exec(
 		ctx,
 		queries.Update(
 			"users",
@@ -118,7 +172,7 @@ func UpdateUser(ctx context.Context, db *Database.DB, user Database.User) error 
 			queries.UsersFields,
 			queries.UsersValues(user),
 		),
-	).Scan()
+	)
 	if err != nil {
 		return err
 	}
@@ -126,7 +180,7 @@ func UpdateUser(ctx context.Context, db *Database.DB, user Database.User) error 
 }
 
 func DeleteUser(ctx context.Context, db *Database.DB, id uint64) (bool, error) {
-	err := db.QueryRow(ctx, queries.Delete("users", "tg_id", id)).Scan()
+	_, err := db.Exec(ctx, queries.Delete("users", "tg_id", id))
 	if err != nil {
 		return false, err
 	}
@@ -134,10 +188,10 @@ func DeleteUser(ctx context.Context, db *Database.DB, id uint64) (bool, error) {
 }
 
 func DropUserOffset(ctx context.Context, db *Database.DB, id int64) error {
-	err := db.QueryRow(
+	_, err := db.Exec(
 		ctx,
 		fmt.Sprintf("UPDATE users SET uoffset = 0 WHERE tg_id = %d", id),
-	).Scan()
+	)
 	if err != nil {
 		return err
 	}
@@ -146,21 +200,96 @@ func DropUserOffset(ctx context.Context, db *Database.DB, id int64) error {
 
 func IncreaseUserOffset(ctx context.Context, db *Database.DB, id int64) error {
 	user, err := GetUserById(ctx, db, id)
-	log.Println("my user", *user.TgId, *user.UOffset)
 	if err != nil {
-		log.Println("get user", err)
 		return err
 	}
-	log.Println("User offset increased:", *user.UOffset, *user.UOffset+1)
-	err = db.QueryRow(
+	if user == nil || user.UOffset == nil {
+		return nil
+	}
+	_, err = db.Exec(
 		ctx,
 		fmt.Sprintf("UPDATE users SET uoffset = %d WHERE tg_id = %d", *user.UOffset+1, id),
-	).Scan()
-	log.Println("error:", err, fmt.Sprintf("UPDATE users SET uoffset = %d WHERE tg_id = %d", *user.UOffset+1, id))
-	user, err = GetUserById(ctx, db, id)
-	log.Println("new user", *user.TgId, *user.UOffset)
+	)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func nonEmptyExpertSystemFields(system Database.ExpertSystem) ([]string, []interface{}) {
+	allFields := queries.UserExpertSystem
+	allValues := queries.UserExpertSystemValues(system)
+
+	fields := make([]string, 0, len(allFields))
+	values := make([]interface{}, 0, len(allValues))
+
+	for i, value := range allValues {
+		if !hasExpertValue(value) {
+			continue
+		}
+
+		fields = append(fields, allFields[i])
+		values = append(values, helper.SafeNil(value))
+	}
+
+	return fields, values
+}
+
+func hasExpertValue(value interface{}) bool {
+	str, ok := helper.SafeNil(value).(string)
+	if !ok {
+		return false
+	}
+
+	return strings.TrimSpace(str) != ""
+}
+
+func expertSystemFieldsChanged(ctx context.Context, db *Database.DB, id int64, incoming Database.ExpertSystem) (bool, error) {
+	user, err := GetUserById(ctx, db, id)
+	if err != nil {
+		return false, err
+	}
+	if user == nil {
+		return true, nil
+	}
+
+	currentValues := queries.UserExpertSystemValues(user.ExpertSystem)
+	incomingValues := queries.UserExpertSystemValues(incoming)
+
+	for i := range incomingValues {
+		incomingValue, ok := helper.SafeNil(incomingValues[i]).(string)
+		if !ok || strings.TrimSpace(incomingValue) == "" {
+			continue
+		}
+
+		currentValue, _ := helper.SafeNil(currentValues[i]).(string)
+		if currentValue != incomingValue {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func expertSystemResetChanged(ctx context.Context, db *Database.DB, id int64) (bool, error) {
+	user, err := GetUserById(ctx, db, id)
+	if err != nil {
+		return false, err
+	}
+	if user == nil {
+		return false, nil
+	}
+
+	for _, value := range queries.UserExpertSystemValues(user.ExpertSystem) {
+		currentValue, _ := helper.SafeNil(value).(string)
+		if strings.TrimSpace(currentValue) != "" {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func stringPtr(value string) *string {
+	return &value
 }

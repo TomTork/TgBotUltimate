@@ -33,6 +33,7 @@ func NewDatabase(ctx context.Context) (*Database.DB, error) {
 		queries.CreateSectionsTable,
 		queries.CreateFlatsTable,
 		queries.CreateTagsTable,
+		queries.CreateExpertSystemTable,
 		queries.CreateMessagesTgIdCreatedAtIndex,
 		queries.CreateBuildingsIndex,
 		queries.CreateFlatsIndex,

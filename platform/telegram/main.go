@@ -1,16 +1,13 @@
 package telegram
 
 import (
-	"TgBotUltimate/database/data"
-	"TgBotUltimate/database/messages"
-	"TgBotUltimate/database/users"
-	"TgBotUltimate/processing"
-	"TgBotUltimate/processing/neuro"
+	"TgBotUltimate/platform/actions"
+	"TgBotUltimate/types/Action"
 	"TgBotUltimate/types/Database"
 	"context"
 	"fmt"
 	"github.com/mymmrac/telego"
-	tu "github.com/mymmrac/telego/telegoutil"
+	"log"
 )
 
 func Telegram(ctx context.Context, botToken string, database *Database.DB) error {
@@ -31,70 +28,37 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 			if !ok {
 				return nil
 			}
+			reqCtx := context.WithoutCancel(ctx)
+			action := Action.Action{
+				ReqCtx:   reqCtx,
+				Ctx:      ctx,
+				Update:   update,
+				Database: database,
+				Bot:      bot,
+			}
+
+			if update.CallbackQuery != nil {
+				actions.CallbackQuery(action)
+				continue
+			}
+
 			if update.Message == nil || update.Message.From == nil {
 				continue
 			}
-			reqCtx := context.WithoutCancel(ctx)
-			_ = users.CreateUser(
-				reqCtx,
-				database,
-				Database.User{
-					TgId:        &update.Message.From.ID,
-					UserName:    &update.Message.From.Username,
-					FirstName:   &update.Message.From.FirstName,
-					LastName:    &update.Message.From.LastName,
-					PhoneNumber: nil,
-					Email:       nil,
-				})
-			n, err := neuro.Parameters(ctx, update.Message.Text)
-			if err != nil {
-				return fmt.Errorf("parse neuro parameters: %w", err)
-			}
-			_ = messages.CreateMessage(
-				reqCtx,
-				database,
-				Database.ChatMessage{
-					TgId:    uint64(update.Message.From.ID),
-					Message: update.Message.Text,
-					Parameters: Database.Parameters{
-						ProjectName:    string(n.ProjectName),
-						BuildingLiter:  string(n.BuildingLiter),
-						FloorMin:       string(n.FloorMin),
-						FloorMax:       string(n.FloorMax),
-						RoomsAmountMin: string(n.RoomsAmountMin),
-						RoomsAmountMax: string(n.RoomsAmountMax),
-						SquareMin:      string(n.SquareMin),
-						SquareMax:      string(n.SquareMax),
-						CostMin:        string(n.CostMin),
-						CostMax:        string(n.CostMax),
-					},
-				})
-			user, err := users.GetUserById(reqCtx, database, update.Message.From.ID)
-			if err != nil {
-				return fmt.Errorf("get user: %w", err)
-			}
-			flats, err := data.GetFlatsByParameters(reqCtx, database, user)
-			for _, flat := range flats {
-				show, flatImg, _ := processing.ShowFlat(flat)
-				if flatImg != "" {
-					_, err = bot.SendPhoto(
-						ctx,
-						tu.Photo(
-							tu.ID(update.Message.Chat.ID),
-							tu.FileFromURL(flatImg),
-						).WithCaption(show),
-					)
+
+			switch update.Message.Text {
+			case "/start":
+				start := actions.Start(action)
+				if start != nil {
+					log.Println(start)
+					return start
 				}
-				//_, err = bot.SendMessage(
-				//	ctx,
-				//	tu.Message(
-				//		tu.ID(update.Message.Chat.ID),
-				//		show,
-				//	),
-				//)
-			}
-			if err != nil {
-				return err
+			default:
+				selection := actions.Selection(action)
+				if selection != nil {
+					log.Println(selection)
+					return selection
+				}
 			}
 		}
 	}
