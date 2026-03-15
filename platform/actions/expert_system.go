@@ -124,37 +124,7 @@ func showNextQuestion(action Action.Action, questions []Expert.Question, afterQu
 		return finishExpertSystem(action)
 	}
 
-	variants := splitAndTrim(nextQuestion.Variants)
-
-	buttonRows := make([][]telego.InlineKeyboardButton, 0, len(variants)+1)
-
-	for i, variant := range variants {
-		buttonRows = append(buttonRows, tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton(variant).
-				WithCallbackData(fmt.Sprintf("%s:%d:%d", ExpertAnswerPrefix, nextQuestion.Id, i)),
-		))
-	}
-
-	navigationRow := make([]telego.InlineKeyboardButton, 0, 2)
-	if hasNextQuestion(action, questions, nextQuestion.Id) {
-		navigationRow = append(navigationRow,
-			tu.InlineKeyboardButton("▶").WithCallbackData(fmt.Sprintf("%s:%d", ExpertNextPrefix, nextQuestion.Id)),
-		)
-	}
-	navigationRow = append(navigationRow,
-		tu.InlineKeyboardButton("Завершить").WithCallbackData(ExpertFinishPrefix),
-	)
-
-	buttonRows = append(buttonRows, navigationRow)
-
-	keyboard := tu.InlineKeyboard(buttonRows...)
-
-	text := fmt.Sprintf(
-		"Вопрос %d из %d\n\n%s",
-		displayIndex,
-		totalAvailable,
-		nextQuestion.Question,
-	)
+	text, keyboard := buildExpertQuestionView(action, questions, *nextQuestion, displayIndex, totalAvailable)
 
 	callback := action.Update.CallbackQuery
 	if callback == nil || callback.Message == nil {
@@ -179,6 +149,72 @@ func showNextQuestion(action Action.Action, questions []Expert.Question, afterQu
 		text,
 	).WithReplyMarkup(keyboard))
 	return err
+}
+
+func StartExpertSystemCommand(action Action.Action) error {
+	if action.Update.Message == nil || action.Update.Message.From == nil {
+		return nil
+	}
+
+	questions, err := expert.GetQuestions(action.Ctx, action.Database)
+	if err != nil {
+		return err
+	}
+
+	deleteManualParameterState(action.Update.Message.From.ID)
+
+	nextQuestion, displayIndex, totalAvailable, err := getNextQuestion(action, questions, nil)
+	if err != nil {
+		return err
+	}
+	if nextQuestion == nil {
+		_, err = action.Bot.SendMessage(action.ReqCtx, tu.Message(
+			tu.ID(action.Update.Message.Chat.ID),
+			"В экспертной системе пока нет доступных вопросов.",
+		))
+		return err
+	}
+
+	text, keyboard := buildExpertQuestionView(action, questions, *nextQuestion, displayIndex, totalAvailable)
+	_, err = action.Bot.SendMessage(action.ReqCtx, tu.Message(
+		tu.ID(action.Update.Message.Chat.ID),
+		text,
+	).WithReplyMarkup(keyboard))
+	return err
+}
+
+func buildExpertQuestionView(action Action.Action, questions []Expert.Question, question Expert.Question, displayIndex int, totalAvailable int) (string, *telego.InlineKeyboardMarkup) {
+	variants := splitAndTrim(question.Variants)
+
+	buttonRows := make([][]telego.InlineKeyboardButton, 0, len(variants)+1)
+
+	for i, variant := range variants {
+		buttonRows = append(buttonRows, tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton(variant).
+				WithCallbackData(fmt.Sprintf("%s:%d:%d", ExpertAnswerPrefix, question.Id, i)),
+		))
+	}
+
+	navigationRow := make([]telego.InlineKeyboardButton, 0, 2)
+	if hasNextQuestion(action, questions, question.Id) {
+		navigationRow = append(navigationRow,
+			tu.InlineKeyboardButton("▶").WithCallbackData(fmt.Sprintf("%s:%d", ExpertNextPrefix, question.Id)),
+		)
+	}
+	navigationRow = append(navigationRow,
+		tu.InlineKeyboardButton("Завершить").WithCallbackData(ExpertFinishPrefix),
+	)
+
+	buttonRows = append(buttonRows, navigationRow)
+
+	text := fmt.Sprintf(
+		"Вопрос %d из %d\n\n%s",
+		displayIndex,
+		totalAvailable,
+		question.Question,
+	)
+
+	return text, tu.InlineKeyboard(buttonRows...)
 }
 
 func getNextQuestion(action Action.Action, questions []Expert.Question, afterQuestionID *int) (*Expert.Question, int, int, error) {
@@ -334,13 +370,9 @@ func resetExpertSystem(action Action.Action) error {
 	if err := ensureCallbackUser(action); err != nil {
 		return err
 	}
-	if err := users.ResetExpertSystemAnswers(action.Ctx, action.Database, callback.From.ID); err != nil {
+	if err := resetExpertSystemByUserID(action, callback.From.ID); err != nil {
 		return err
 	}
-	if err := users.ResetExpertSystemFields(action.Ctx, action.Database, callback.From.ID); err != nil {
-		return err
-	}
-	deleteManualParameterState(callback.From.ID)
 
 	_, err := action.Bot.EditMessageText(action.ReqCtx, &telego.EditMessageTextParams{
 		ChatID:      tu.ID(callback.Message.GetChat().ID),
@@ -360,14 +392,53 @@ func startFlatSelection(action Action.Action) error {
 	if err := ensureCallbackUser(action); err != nil {
 		return err
 	}
-	deleteManualParameterState(callback.From.ID)
+	return startFlatSelectionByUserID(action, callback.From.ID, callback.Message.GetChat().ID, true)
+}
 
-	user, err := users.GetUserById(action.Ctx, action.Database, callback.From.ID)
+func ResetExpertSystemCommand(action Action.Action) error {
+	if action.Update.Message == nil || action.Update.Message.From == nil {
+		return nil
+	}
+
+	if err := resetExpertSystemByUserID(action, action.Update.Message.From.ID); err != nil {
+		return err
+	}
+
+	_, err := action.Bot.SendMessage(action.ReqCtx, tu.Message(
+		tu.ID(action.Update.Message.Chat.ID),
+		"Параметры экспертной системы сброшены.",
+	).WithReplyMarkup(expertFinishKeyboard()))
+	return err
+}
+
+func StartFlatSelectionCommand(action Action.Action) error {
+	if action.Update.Message == nil || action.Update.Message.From == nil {
+		return nil
+	}
+
+	return startFlatSelectionByUserID(action, action.Update.Message.From.ID, action.Update.Message.Chat.ID, false)
+}
+
+func resetExpertSystemByUserID(action Action.Action, userID int64) error {
+	if err := users.ResetExpertSystemAnswers(action.Ctx, action.Database, userID); err != nil {
+		return err
+	}
+	if err := users.ResetExpertSystemFields(action.Ctx, action.Database, userID); err != nil {
+		return err
+	}
+	deleteManualParameterState(userID)
+	return nil
+}
+
+func startFlatSelectionByUserID(action Action.Action, userID int64, chatID int64, increaseOffset bool) error {
+	deleteManualParameterState(userID)
+
+	user, err := users.GetUserById(action.Ctx, action.Database, userID)
 	if err != nil {
 		return err
 	}
 
-	return sendFlatsByUser(action, user, callback.Message.GetChat().ID, true)
+	return sendFlatsByUser(action, user, chatID, increaseOffset)
 }
 
 func buildExpertSystemUpdate(values map[string]string) dbtypes.ExpertSystem {
@@ -442,16 +513,19 @@ func ensureCallbackUser(action Action.Action) error {
 }
 
 func getCurrentUserExpertAnswers(action Action.Action) ([]dbtypes.ExpertSystemAnswer, error) {
-	callback := action.Update.CallbackQuery
-	if callback == nil {
-		return nil, nil
+	if action.Update.CallbackQuery != nil {
+		callback := action.Update.CallbackQuery
+		if err := ensureCallbackUser(action); err != nil {
+			return nil, err
+		}
+		return users.GetExpertSystemAnswers(action.Ctx, action.Database, callback.From.ID)
 	}
 
-	if err := ensureCallbackUser(action); err != nil {
-		return nil, err
+	if action.Update.Message != nil && action.Update.Message.From != nil {
+		return users.GetExpertSystemAnswers(action.Ctx, action.Database, action.Update.Message.From.ID)
 	}
 
-	return users.GetExpertSystemAnswers(action.Ctx, action.Database, callback.From.ID)
+	return nil, nil
 }
 
 func filterAvailableQuestions(questions []Expert.Question, excludedQuestionIDs map[int]struct{}) []Expert.Question {

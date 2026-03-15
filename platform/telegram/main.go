@@ -16,6 +16,13 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 	if err != nil {
 		return fmt.Errorf("create telegram bot: %w", err)
 	}
+
+	// Установка команд
+	actions.SetCommands(Action.Action{
+		Ctx: context.WithoutCancel(ctx),
+		Bot: bot,
+	})
+
 	updates, err := bot.UpdatesViaLongPolling(ctx, nil)
 	if err != nil {
 		return err
@@ -65,6 +72,30 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 				if start != nil {
 					log.Println(start)
 					return start
+				}
+			case "/help":
+				help := actions.Help(action)
+				if help != nil {
+					log.Println(help)
+					return help
+				}
+			case "/questions":
+				questions := actions.StartExpertSystemCommand(action)
+				if questions != nil {
+					log.Println(questions)
+					return questions
+				}
+			case "/reload":
+				reload := actions.ResetExpertSystemCommand(action)
+				if reload != nil {
+					log.Println(reload)
+					return reload
+				}
+			case "/flats":
+				flats := actions.StartFlatSelectionCommand(action)
+				if flats != nil {
+					log.Println(flats)
+					return flats
 				}
 			default:
 				handled, err := actions.HandleManualParameterMessage(action)
