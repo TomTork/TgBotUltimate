@@ -161,7 +161,7 @@ async def health():
 
 @app.post("/parse", response_model=ParseResponse)
 async def parse(req: ParseRequest):
-    text = req.text.strip()
+    text = req.text.strip().replace("ё", "е")
     if not text:
         raise HTTPException(status_code=400, detail="Empty text")
 

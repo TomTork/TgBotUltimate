@@ -5,7 +5,6 @@ import (
 	"TgBotUltimate/database/users"
 	"TgBotUltimate/types/Database"
 	"context"
-	"log"
 	"os"
 	"strconv"
 )
@@ -64,8 +63,6 @@ func ParametersHasBeenChanged(ctx context.Context, db *Database.DB, newMessage D
 		return true, nil
 	}
 	lastMessage := messages[len(messages)-1]
-	log.Println("lastMessage", lastMessage)
-	log.Println("newMessage", newMessage)
 	if lastMessage.ProjectName != newMessage.ProjectName ||
 		lastMessage.BuildingLiter != newMessage.BuildingLiter ||
 		lastMessage.FloorMin != newMessage.FloorMin ||
@@ -76,7 +73,6 @@ func ParametersHasBeenChanged(ctx context.Context, db *Database.DB, newMessage D
 		lastMessage.SquareMax != newMessage.SquareMax ||
 		lastMessage.CostMin != newMessage.CostMin ||
 		lastMessage.CostMax != newMessage.CostMax {
-		log.Println("messages not equal")
 		return true, nil
 	}
 	return false, nil
@@ -122,7 +118,6 @@ func CreateMessage(ctx context.Context, db *Database.DB, message Database.ChatMe
 		db.QueryRow(ctx, queries.Delete("messages", "id", __message.Id))
 	}
 	db.QueryRow(ctx, queries.Create("messages", queries.MessagesFields, queries.MessagesValues(message)))
-	log.Println("increase start")
 	_ = users.IncreaseUserOffset(ctx, db, int64(message.TgId))
 	return nil
 }

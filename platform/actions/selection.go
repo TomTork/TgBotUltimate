@@ -16,17 +16,6 @@ import (
 const ShowMoreFlatsPrefix = "show_more_flats"
 
 func Selection(a Action.Action) error {
-	_ = users.CreateUser(
-		a.ReqCtx,
-		a.Database,
-		Database.User{
-			TgId:        &a.Update.Message.From.ID,
-			UserName:    &a.Update.Message.From.Username,
-			FirstName:   &a.Update.Message.From.FirstName,
-			LastName:    &a.Update.Message.From.LastName,
-			PhoneNumber: nil,
-			Email:       nil,
-		})
 	n, err := neuro.Parameters(a.Ctx, a.Update.Message.Text)
 	if err != nil {
 		return fmt.Errorf("parse neuro parameters: %w", err)
@@ -115,7 +104,7 @@ func sendFlatsByUser(a Action.Action, user *Database.User, chatID int64, increas
 		a.Ctx,
 		tu.Message(
 			tu.ID(chatID),
-			"Показать ещё",
+			"Смотрим следующие квартиры?",
 		).WithReplyMarkup(showMoreKeyboard()),
 	)
 	if err != nil {
@@ -151,6 +140,9 @@ func showMoreKeyboard() *telego.InlineKeyboardMarkup {
 	return tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("Показать ещё").WithCallbackData(ShowMoreFlatsPrefix),
+		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("Сбросить параметры").WithCallbackData(ExpertResetPrefix),
 		),
 	)
 }

@@ -13,6 +13,9 @@ func Start(action Action.Action) error {
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("Установить параметры вручную").WithCallbackData("parameters"),
 		),
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("Начать подбор квартиры").WithCallbackData(ExpertSelectFlatsPrefix),
+		),
 	)
 
 	_, err := action.Bot.SendMessage(

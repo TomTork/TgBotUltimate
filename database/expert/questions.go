@@ -7,7 +7,7 @@ import (
 )
 
 func GetQuestions(ctx context.Context, db *Database.DB) ([]Expert.Question, error) {
-	rows, err := db.Query(ctx, "SELECT * FROM expert_system")
+	rows, err := db.Query(ctx, "SELECT id, question, variants, results, no_routes FROM expert_system ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -20,6 +20,7 @@ func GetQuestions(ctx context.Context, db *Database.DB) ([]Expert.Question, erro
 			&question.Question,
 			&question.Variants,
 			&question.Results,
+			&question.NoRoutes,
 		)
 		if err != nil {
 			return nil, err

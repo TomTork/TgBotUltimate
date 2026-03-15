@@ -159,7 +159,28 @@ CREATE TABLE IF NOT EXISTS expert_system (
     id SERIAL PRIMARY KEY,
     question VARCHAR(1023) DEFAULT '',
     variants VARCHAR(4095) DEFAULT '',
-    results VARCHAR(8191) DEFAULT ''
+    results VARCHAR(8191) DEFAULT '',
+    no_routes VARCHAR(1023) DEFAULT ''
+);
+`
+
+const CreateUserExpertSystemAnswersTable = `
+CREATE TABLE IF NOT EXISTS user_expert_system_answers (
+    id SERIAL PRIMARY KEY,
+    user_tg_id BIGINT NOT NULL,
+    question_id INTEGER NOT NULL,
+    variant_index INTEGER NOT NULL,
+    CONSTRAINT fk_user_expert_system_answers_user
+        FOREIGN KEY (user_tg_id)
+        REFERENCES users(tg_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_user_expert_system_answers_question
+        FOREIGN KEY (question_id)
+        REFERENCES expert_system(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT uq_user_expert_system_answers UNIQUE (user_tg_id, question_id)
 );
 `
 
@@ -253,4 +274,8 @@ func Delete(tableName string, idName string, id uint64) string {
 
 func Count(tableName string, idName string, id uint64) string {
 	return fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE %s = %d;`, tableName, idName, id)
+}
+
+func DropExpertSystemFields(id int64) string {
+	return fmt.Sprintf("UPDATE users SET ex_project_name = '', ex_building_liter = '', ex_floor_min = '', ex_floor_max = '', ex_rooms_amount_min = '', ex_rooms_amount_max = '', ex_square_min = '', ex_square_max = '', ex_cost_min = '', ex_cost_max = '' WHERE tg_id = %d", id)
 }

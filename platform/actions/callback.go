@@ -17,10 +17,17 @@ func CallbackQuery(action Action.Action) {
 		data == "expert_reset",
 		data == "expert_select_flats",
 		strings.HasPrefix(data, "expert_answer:"),
-		strings.HasPrefix(data, "expert_prev:"),
 		strings.HasPrefix(data, "expert_next:"):
 		if err := ExpertSystem(action); err != nil {
 			log.Println("expert_system error:", err)
+		}
+	case data == ManualParametersStartPrefix,
+		data == ManualParameterPrevPrefix,
+		data == ManualParameterNextPrefix,
+		data == ManualParameterFinishPrefix,
+		strings.HasPrefix(data, ManualParameterSetPrefix+":"):
+		if err := ManualParameters(action); err != nil {
+			log.Println("manual_parameters error:", err)
 		}
 	case data == ShowMoreFlatsPrefix:
 		if err := ShowMoreFlats(action); err != nil {

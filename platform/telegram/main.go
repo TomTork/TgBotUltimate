@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"TgBotUltimate/database/users"
 	"TgBotUltimate/platform/actions"
 	"TgBotUltimate/types/Action"
 	"TgBotUltimate/types/Database"
@@ -46,6 +47,18 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 				continue
 			}
 
+			_ = users.CreateUser(
+				action.ReqCtx,
+				action.Database,
+				Database.User{
+					TgId:        &action.Update.Message.From.ID,
+					UserName:    &action.Update.Message.From.Username,
+					FirstName:   &action.Update.Message.From.FirstName,
+					LastName:    &action.Update.Message.From.LastName,
+					PhoneNumber: nil,
+					Email:       nil,
+				})
+
 			switch update.Message.Text {
 			case "/start":
 				start := actions.Start(action)
@@ -54,6 +67,14 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 					return start
 				}
 			default:
+				handled, err := actions.HandleManualParameterMessage(action)
+				if err != nil {
+					log.Println(err)
+					return err
+				}
+				if handled {
+					continue
+				}
 				selection := actions.Selection(action)
 				if selection != nil {
 					log.Println(selection)

@@ -42,6 +42,11 @@ var UserExpertSystemValues = func(system Database.ExpertSystem) []interface{} {
 	return []interface{}{system.ExProjectName, system.ExBuildingLiter, system.ExFloorMin, system.ExFloorMax, system.ExRoomsAmountMin, system.ExRoomsAmountMax, system.ExSquareMin, system.ExSquareMax, system.ExCostMin, system.ExCostMax}
 }
 
+var UserExpertSystemAnswersFields = []string{"user_tg_id", "question_id", "variant_index"}
+var UserExpertSystemAnswersValues = func(answer Database.ExpertSystemAnswer) []interface{} {
+	return []interface{}{answer.UserTgID, answer.QuestionID, answer.VariantIndex}
+}
+
 var MessagesFields = []string{"tg_id", "message", "project_name", "building_liter", "floor_min", "floor_max", "rooms_amount_min", "rooms_amount_max", "square_min", "square_max", "cost_min", "cost_max"}
 var MessagesValues = func(message Database.ChatMessage) []interface{} {
 	if message.ProjectName == "<UNK>" {

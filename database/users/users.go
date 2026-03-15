@@ -38,7 +38,15 @@ func SaveAllUsersDataToFile(ctx context.Context, db *Database.DB) ([]byte, error
 	}
 	var __users = make([]string, len(users))
 	for _, user := range users {
-		__users = append(__users, fmt.Sprintf("%d;%s;%s;%s;%s;%s", user.TgId, user.UserName, user.FirstName, user.LastName, user.PhoneNumber, user.Email))
+		__users = append(__users, fmt.Sprintf(
+			"%d;%s;%s;%s;%s;%s",
+			derefInt64(user.TgId),
+			derefString(user.UserName),
+			derefString(user.FirstName),
+			derefString(user.LastName),
+			derefString(user.PhoneNumber),
+			derefString(user.Email),
+		))
 	}
 	return []byte(strings.Join(__users, "\n")), nil
 }
@@ -124,21 +132,8 @@ func SetExpertSystemFields(ctx context.Context, db *Database.DB, id int64, syste
 	return nil
 }
 
-func ResetExpertSystemFields(ctx context.Context, db *Database.DB, id int64) error {
-	system := Database.ExpertSystem{
-		ExProjectName:    stringPtr(""),
-		ExBuildingLiter:  stringPtr(""),
-		ExFloorMin:       stringPtr(""),
-		ExFloorMax:       stringPtr(""),
-		ExRoomsAmountMin: stringPtr(""),
-		ExRoomsAmountMax: stringPtr(""),
-		ExSquareMin:      stringPtr(""),
-		ExSquareMax:      stringPtr(""),
-		ExCostMin:        stringPtr(""),
-		ExCostMax:        stringPtr(""),
-	}
-
-	changed, err := expertSystemResetChanged(ctx, db, id)
+func ReplaceExpertSystemFields(ctx context.Context, db *Database.DB, id int64, system Database.ExpertSystem) error {
+	changed, err := expertSystemReplaceChanged(ctx, db, id, system)
 	if err != nil {
 		return err
 	}
@@ -156,8 +151,27 @@ func ResetExpertSystemFields(ctx context.Context, db *Database.DB, id int64) err
 			"tg_id",
 			uint64(id),
 			queries.UserExpertSystem,
-			queries.UserExpertSystemValues(system),
+			normalizedExpertSystemValues(system),
 		),
+	)
+	return err
+}
+
+func ResetExpertSystemFields(ctx context.Context, db *Database.DB, id int64) error {
+	changed, err := expertSystemResetChanged(ctx, db, id)
+	if err != nil {
+		return err
+	}
+	if changed {
+		err = DropUserOffset(ctx, db, id)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = db.Exec(
+		ctx,
+		queries.DropExpertSystemFields(id),
 	)
 	return err
 }
@@ -290,6 +304,58 @@ func expertSystemResetChanged(ctx context.Context, db *Database.DB, id int64) (b
 	return false, nil
 }
 
+func expertSystemReplaceChanged(ctx context.Context, db *Database.DB, id int64, incoming Database.ExpertSystem) (bool, error) {
+	user, err := GetUserById(ctx, db, id)
+	if err != nil {
+		return false, err
+	}
+	if user == nil {
+		return true, nil
+	}
+
+	currentValues := normalizedExpertSystemValues(user.ExpertSystem)
+	incomingValues := normalizedExpertSystemValues(incoming)
+
+	for i := range incomingValues {
+		currentValue, _ := currentValues[i].(string)
+		incomingValue, _ := incomingValues[i].(string)
+		if currentValue != incomingValue {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func normalizedExpertSystemValues(system Database.ExpertSystem) []interface{} {
+	rawValues := queries.UserExpertSystemValues(system)
+	values := make([]interface{}, 0, len(rawValues))
+
+	for _, value := range rawValues {
+		normalized, ok := helper.SafeNil(value).(string)
+		if !ok {
+			normalized = ""
+		}
+		values = append(values, normalized)
+	}
+
+	return values
+}
+
 func stringPtr(value string) *string {
 	return &value
+}
+
+func derefString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func derefInt64(value *int64) int64 {
+	if value == nil {
+		return 0
+	}
+	return *value
 }

@@ -18,7 +18,6 @@ import (
 const (
 	ExpertStartPrefix       = "expert_system"
 	ExpertAnswerPrefix      = "expert_answer"
-	ExpertPrevPrefix        = "expert_prev"
 	ExpertNextPrefix        = "expert_next"
 	ExpertFinishPrefix      = "expert_finish"
 	ExpertResetPrefix       = "expert_reset"
@@ -29,9 +28,6 @@ func ExpertSystem(action Action.Action) error {
 	questions, err := expert.GetQuestions(action.Ctx, action.Database)
 	if err != nil {
 		return err
-	}
-	if len(questions) == 0 {
-		return sendText(action, "В экспертной системе пока нет вопросов.")
 	}
 	if action.Update.CallbackQuery == nil {
 		return nil
@@ -46,7 +42,8 @@ func ExpertSystem(action Action.Action) error {
 	data := callback.Data
 	switch {
 	case data == ExpertStartPrefix:
-		return showQuestion(action, 0, false)
+		deleteManualParameterState(callback.From.ID)
+		return showNextQuestion(action, questions, nil, false)
 	case data == ExpertFinishPrefix:
 		return finishExpertSystem(action)
 	case data == ExpertResetPrefix:
@@ -55,23 +52,21 @@ func ExpertSystem(action Action.Action) error {
 		return startFlatSelection(action)
 	case strings.HasPrefix(data, ExpertAnswerPrefix+":"):
 		return handleAnswerCallback(action, questions, data)
-	case strings.HasPrefix(data, ExpertPrevPrefix+":"):
-		return handleNavigationCallback(action, questions, data, ExpertPrevPrefix)
 	case strings.HasPrefix(data, ExpertNextPrefix+":"):
-		return handleNavigationCallback(action, questions, data, ExpertNextPrefix)
+		return handleSkipCallback(action, questions, data)
 	default:
 		return nil
 	}
 }
 
 func handleAnswerCallback(action Action.Action, questions []Expert.Question, data string) error {
-	// expert_answer:<questionIndex>:<variantIndex>
+	// expert_answer:<questionID>:<variantIndex>
 	parts := strings.Split(data, ":")
 	if len(parts) != 3 {
 		return nil
 	}
 
-	questionIndex, err := strconv.Atoi(parts[1])
+	questionID, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return nil
 	}
@@ -81,98 +76,74 @@ func handleAnswerCallback(action Action.Action, questions []Expert.Question, dat
 		return nil
 	}
 
-	if questionIndex < 0 || questionIndex >= len(questions) {
+	currentQuestion, ok := findQuestionByID(questions, questionID)
+	if !ok {
 		return finishExpertSystem(action)
 	}
-
-	currentQuestion := questions[questionIndex]
+	available, err := isQuestionAvailable(action, questions, questionID)
+	if err != nil {
+		return err
+	}
+	if !available {
+		return showNextQuestion(action, questions, &questionID, true)
+	}
 	variants := splitAndTrim(currentQuestion.Variants)
 
 	if variantIndex < 0 || variantIndex >= len(variants) {
 		return nil
 	}
 
-	err = processExpertAnswer(action, currentQuestion.Results, variantIndex)
+	err = processExpertAnswer(action, currentQuestion, variantIndex)
 	if err != nil {
 		return err
 	}
 
-	nextIndex := questionIndex + 1
-	if nextIndex >= len(questions) {
-		return finishExpertSystem(action)
-	}
-
-	return showQuestion(action, nextIndex, true)
+	return showNextQuestion(action, questions, &questionID, true)
 }
 
-func handleNavigationCallback(action Action.Action, questions []Expert.Question, data string, prefix string) error {
+func handleSkipCallback(action Action.Action, questions []Expert.Question, data string) error {
 	parts := strings.Split(data, ":")
 	if len(parts) != 2 {
 		return nil
 	}
 
-	questionIndex, err := strconv.Atoi(parts[1])
+	questionID, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return nil
 	}
 
-	switch prefix {
-	case ExpertPrevPrefix:
-		if questionIndex <= 0 {
-			return showQuestion(action, 0, true)
-		}
-		return showQuestion(action, questionIndex-1, true)
-	case ExpertNextPrefix:
-		if len(questions) == 0 {
-			return nil
-		}
-		if questionIndex < 0 {
-			return showQuestion(action, 0, true)
-		}
-		if questionIndex >= len(questions)-1 {
-			return showQuestion(action, len(questions)-1, true)
-		}
-		return showQuestion(action, questionIndex+1, true)
-	default:
-		return nil
-	}
+	return showNextQuestion(action, questions, &questionID, true)
 }
 
-func showQuestion(action Action.Action, questionIndex int, editCurrentMessage bool) error {
-	questions, err := expert.GetQuestions(action.Ctx, action.Database)
+func showNextQuestion(action Action.Action, questions []Expert.Question, afterQuestionID *int, editCurrentMessage bool) error {
+	nextQuestion, displayIndex, totalAvailable, err := getNextQuestion(action, questions, afterQuestionID)
 	if err != nil {
 		return err
 	}
-	if questionIndex < 0 || questionIndex >= len(questions) {
+	if nextQuestion == nil {
 		return finishExpertSystem(action)
 	}
 
-	question := questions[questionIndex]
-	variants := splitAndTrim(question.Variants)
+	variants := splitAndTrim(nextQuestion.Variants)
 
 	buttonRows := make([][]telego.InlineKeyboardButton, 0, len(variants)+1)
 
 	for i, variant := range variants {
 		buttonRows = append(buttonRows, tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton(variant).
-				WithCallbackData(fmt.Sprintf("%s:%d:%d", ExpertAnswerPrefix, questionIndex, i)),
+				WithCallbackData(fmt.Sprintf("%s:%d:%d", ExpertAnswerPrefix, nextQuestion.Id, i)),
 		))
 	}
 
-	navigationRow := make([]telego.InlineKeyboardButton, 0, 3)
-	if questionIndex > 0 {
+	navigationRow := make([]telego.InlineKeyboardButton, 0, 2)
+	if hasNextQuestion(action, questions, nextQuestion.Id) {
 		navigationRow = append(navigationRow,
-			tu.InlineKeyboardButton("◀").WithCallbackData(fmt.Sprintf("%s:%d", ExpertPrevPrefix, questionIndex)),
+			tu.InlineKeyboardButton("▶").WithCallbackData(fmt.Sprintf("%s:%d", ExpertNextPrefix, nextQuestion.Id)),
 		)
 	}
 	navigationRow = append(navigationRow,
 		tu.InlineKeyboardButton("Завершить").WithCallbackData(ExpertFinishPrefix),
 	)
-	if questionIndex < len(questions)-1 {
-		navigationRow = append(navigationRow,
-			tu.InlineKeyboardButton("▶").WithCallbackData(fmt.Sprintf("%s:%d", ExpertNextPrefix, questionIndex)),
-		)
-	}
 
 	buttonRows = append(buttonRows, navigationRow)
 
@@ -180,9 +151,9 @@ func showQuestion(action Action.Action, questionIndex int, editCurrentMessage bo
 
 	text := fmt.Sprintf(
 		"Вопрос %d из %d\n\n%s",
-		questionIndex+1,
-		len(questions),
-		question.Question,
+		displayIndex,
+		totalAvailable,
+		nextQuestion.Question,
 	)
 
 	callback := action.Update.CallbackQuery
@@ -208,6 +179,57 @@ func showQuestion(action Action.Action, questionIndex int, editCurrentMessage bo
 		text,
 	).WithReplyMarkup(keyboard))
 	return err
+}
+
+func getNextQuestion(action Action.Action, questions []Expert.Question, afterQuestionID *int) (*Expert.Question, int, int, error) {
+	answers, err := getCurrentUserExpertAnswers(action)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	excludedQuestionIDs := buildExcludedQuestionIDs(questions, answers)
+	availableQuestions := filterAvailableQuestions(questions, excludedQuestionIDs)
+	if len(availableQuestions) == 0 {
+		return nil, 0, 0, nil
+	}
+
+	startIndex := 0
+	if afterQuestionID != nil {
+		startIndex = len(questions)
+		for i, question := range questions {
+			if question.Id == *afterQuestionID {
+				startIndex = i + 1
+				break
+			}
+		}
+	}
+
+	for i := startIndex; i < len(questions); i++ {
+		question := questions[i]
+		if _, excluded := excludedQuestionIDs[question.Id]; excluded {
+			continue
+		}
+
+		return &question, questionPosition(availableQuestions, question.Id), len(availableQuestions), nil
+	}
+
+	return nil, 0, len(availableQuestions), nil
+}
+
+func hasNextQuestion(action Action.Action, questions []Expert.Question, currentQuestionID int) bool {
+	nextQuestion, _, _, err := getNextQuestion(action, questions, &currentQuestionID)
+	return err == nil && nextQuestion != nil
+}
+
+func isQuestionAvailable(action Action.Action, questions []Expert.Question, questionID int) (bool, error) {
+	answers, err := getCurrentUserExpertAnswers(action)
+	if err != nil {
+		return false, err
+	}
+
+	excludedQuestionIDs := buildExcludedQuestionIDs(questions, answers)
+	_, excluded := excludedQuestionIDs[questionID]
+	return !excluded, nil
 }
 
 func finishExpertSystem(action Action.Action) error {
@@ -267,11 +289,7 @@ func splitAndTrim(value string) []string {
 	return result
 }
 
-func processExpertAnswer(action Action.Action, results string, variantIndex int) error {
-	if strings.TrimSpace(results) == "" {
-		return nil
-	}
-
+func processExpertAnswer(action Action.Action, question Expert.Question, variantIndex int) error {
 	callback := action.Update.CallbackQuery
 	if callback == nil {
 		return nil
@@ -281,8 +299,20 @@ func processExpertAnswer(action Action.Action, results string, variantIndex int)
 		return err
 	}
 
+	if err := users.SaveExpertSystemAnswer(action.Ctx, action.Database, dbtypes.ExpertSystemAnswer{
+		UserTgID:     callback.From.ID,
+		QuestionID:   question.Id,
+		VariantIndex: variantIndex,
+	}); err != nil {
+		return err
+	}
+
+	if strings.TrimSpace(question.Results) == "" {
+		return nil
+	}
+
 	var parsedResults map[string]map[string]string
-	if err := json.Unmarshal([]byte(results), &parsedResults); err != nil {
+	if err := json.Unmarshal([]byte(question.Results), &parsedResults); err != nil {
 		return nil
 	}
 
@@ -304,14 +334,18 @@ func resetExpertSystem(action Action.Action) error {
 	if err := ensureCallbackUser(action); err != nil {
 		return err
 	}
+	if err := users.ResetExpertSystemAnswers(action.Ctx, action.Database, callback.From.ID); err != nil {
+		return err
+	}
 	if err := users.ResetExpertSystemFields(action.Ctx, action.Database, callback.From.ID); err != nil {
 		return err
 	}
+	deleteManualParameterState(callback.From.ID)
 
 	_, err := action.Bot.EditMessageText(action.ReqCtx, &telego.EditMessageTextParams{
 		ChatID:      tu.ID(callback.Message.GetChat().ID),
 		MessageID:   callback.Message.GetMessageID(),
-		Text:        "Параметры expert system сброшены.",
+		Text:        "Параметры экспертной системы сброшены.",
 		ReplyMarkup: expertFinishKeyboard(),
 	})
 	return err
@@ -326,6 +360,7 @@ func startFlatSelection(action Action.Action) error {
 	if err := ensureCallbackUser(action); err != nil {
 		return err
 	}
+	deleteManualParameterState(callback.From.ID)
 
 	user, err := users.GetUserById(action.Ctx, action.Database, callback.From.ID)
 	if err != nil {
@@ -378,7 +413,7 @@ func stringPtr(value string) *string {
 func expertFinishKeyboard() *telego.InlineKeyboardMarkup {
 	return tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
-			tu.InlineKeyboardButton("Сбросить варианты ответов").WithCallbackData(ExpertResetPrefix),
+			tu.InlineKeyboardButton("Сбросить вопросы экспертной системы").WithCallbackData(ExpertResetPrefix),
 		),
 		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("Начать подбор квартиры").WithCallbackData(ExpertSelectFlatsPrefix),
@@ -404,4 +439,105 @@ func ensureCallbackUser(action Action.Action) error {
 			Email:       nil,
 		},
 	)
+}
+
+func getCurrentUserExpertAnswers(action Action.Action) ([]dbtypes.ExpertSystemAnswer, error) {
+	callback := action.Update.CallbackQuery
+	if callback == nil {
+		return nil, nil
+	}
+
+	if err := ensureCallbackUser(action); err != nil {
+		return nil, err
+	}
+
+	return users.GetExpertSystemAnswers(action.Ctx, action.Database, callback.From.ID)
+}
+
+func filterAvailableQuestions(questions []Expert.Question, excludedQuestionIDs map[int]struct{}) []Expert.Question {
+	availableQuestions := make([]Expert.Question, 0, len(questions))
+	for _, question := range questions {
+		if _, excluded := excludedQuestionIDs[question.Id]; excluded {
+			continue
+		}
+		availableQuestions = append(availableQuestions, question)
+	}
+
+	return availableQuestions
+}
+
+func buildExcludedQuestionIDs(questions []Expert.Question, answers []dbtypes.ExpertSystemAnswer) map[int]struct{} {
+	excludedQuestionIDs := make(map[int]struct{}, len(answers))
+	questionsByID := make(map[int]Expert.Question, len(questions))
+
+	for _, question := range questions {
+		questionsByID[question.Id] = question
+	}
+
+	for _, answer := range answers {
+		excludedQuestionIDs[answer.QuestionID] = struct{}{}
+
+		question, ok := questionsByID[answer.QuestionID]
+		if !ok {
+			continue
+		}
+
+		for _, blockedQuestionID := range blockedQuestionIDsForVariant(question.NoRoutes, answer.VariantIndex) {
+			excludedQuestionIDs[blockedQuestionID] = struct{}{}
+		}
+	}
+
+	return excludedQuestionIDs
+}
+
+func blockedQuestionIDsForVariant(noRoutes string, variantIndex int) []int {
+	if strings.TrimSpace(noRoutes) == "" || variantIndex < 0 {
+		return nil
+	}
+
+	variantRules := strings.Split(noRoutes, ";")
+	if variantIndex >= len(variantRules) {
+		return nil
+	}
+
+	rule := strings.TrimSpace(variantRules[variantIndex])
+	rule = strings.Trim(rule, "\"")
+	if rule == "" {
+		return nil
+	}
+
+	parts := strings.Split(rule, ",")
+	blockedIDs := make([]int, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(strings.Trim(part, "\""))
+		if part == "" {
+			continue
+		}
+
+		blockedID, err := strconv.Atoi(part)
+		if err != nil {
+			continue
+		}
+		blockedIDs = append(blockedIDs, blockedID)
+	}
+
+	return blockedIDs
+}
+
+func findQuestionByID(questions []Expert.Question, questionID int) (Expert.Question, bool) {
+	for _, question := range questions {
+		if question.Id == questionID {
+			return question, true
+		}
+	}
+	return Expert.Question{}, false
+}
+
+func questionPosition(questions []Expert.Question, questionID int) int {
+	for i, question := range questions {
+		if question.Id == questionID {
+			return i + 1
+		}
+	}
+	return 0
 }

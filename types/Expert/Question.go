@@ -5,4 +5,5 @@ type Question struct {
 	Question string
 	Variants string
 	Results  string
+	NoRoutes string
 }
