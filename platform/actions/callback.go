@@ -16,7 +16,9 @@ func CallbackQuery(action Action.Action) {
 		data == "expert_finish",
 		data == "expert_reset",
 		data == "expert_select_flats",
-		strings.HasPrefix(data, "expert_answer:"):
+		strings.HasPrefix(data, "expert_answer:"),
+		strings.HasPrefix(data, "expert_prev:"),
+		strings.HasPrefix(data, "expert_next:"):
 		if err := ExpertSystem(action); err != nil {
 			log.Println("expert_system error:", err)
 		}

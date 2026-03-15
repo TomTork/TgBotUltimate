@@ -18,6 +18,8 @@ import (
 const (
 	ExpertStartPrefix       = "expert_system"
 	ExpertAnswerPrefix      = "expert_answer"
+	ExpertPrevPrefix        = "expert_prev"
+	ExpertNextPrefix        = "expert_next"
 	ExpertFinishPrefix      = "expert_finish"
 	ExpertResetPrefix       = "expert_reset"
 	ExpertSelectFlatsPrefix = "expert_select_flats"
@@ -53,13 +55,16 @@ func ExpertSystem(action Action.Action) error {
 		return startFlatSelection(action)
 	case strings.HasPrefix(data, ExpertAnswerPrefix+":"):
 		return handleAnswerCallback(action, questions, data)
+	case strings.HasPrefix(data, ExpertPrevPrefix+":"):
+		return handleNavigationCallback(action, questions, data, ExpertPrevPrefix)
+	case strings.HasPrefix(data, ExpertNextPrefix+":"):
+		return handleNavigationCallback(action, questions, data, ExpertNextPrefix)
 	default:
 		return nil
 	}
 }
 
 func handleAnswerCallback(action Action.Action, questions []Expert.Question, data string) error {
-	// ожидаемый формат:
 	// expert_answer:<questionIndex>:<variantIndex>
 	parts := strings.Split(data, ":")
 	if len(parts) != 3 {
@@ -100,6 +105,39 @@ func handleAnswerCallback(action Action.Action, questions []Expert.Question, dat
 	return showQuestion(action, nextIndex, true)
 }
 
+func handleNavigationCallback(action Action.Action, questions []Expert.Question, data string, prefix string) error {
+	parts := strings.Split(data, ":")
+	if len(parts) != 2 {
+		return nil
+	}
+
+	questionIndex, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return nil
+	}
+
+	switch prefix {
+	case ExpertPrevPrefix:
+		if questionIndex <= 0 {
+			return showQuestion(action, 0, true)
+		}
+		return showQuestion(action, questionIndex-1, true)
+	case ExpertNextPrefix:
+		if len(questions) == 0 {
+			return nil
+		}
+		if questionIndex < 0 {
+			return showQuestion(action, 0, true)
+		}
+		if questionIndex >= len(questions)-1 {
+			return showQuestion(action, len(questions)-1, true)
+		}
+		return showQuestion(action, questionIndex+1, true)
+	default:
+		return nil
+	}
+}
+
 func showQuestion(action Action.Action, questionIndex int, editCurrentMessage bool) error {
 	questions, err := expert.GetQuestions(action.Ctx, action.Database)
 	if err != nil {
@@ -121,10 +159,22 @@ func showQuestion(action Action.Action, questionIndex int, editCurrentMessage bo
 		))
 	}
 
-	// обязательная кнопка завершения
-	buttonRows = append(buttonRows, tu.InlineKeyboardRow(
+	navigationRow := make([]telego.InlineKeyboardButton, 0, 3)
+	if questionIndex > 0 {
+		navigationRow = append(navigationRow,
+			tu.InlineKeyboardButton("◀").WithCallbackData(fmt.Sprintf("%s:%d", ExpertPrevPrefix, questionIndex)),
+		)
+	}
+	navigationRow = append(navigationRow,
 		tu.InlineKeyboardButton("Завершить").WithCallbackData(ExpertFinishPrefix),
-	))
+	)
+	if questionIndex < len(questions)-1 {
+		navigationRow = append(navigationRow,
+			tu.InlineKeyboardButton("▶").WithCallbackData(fmt.Sprintf("%s:%d", ExpertNextPrefix, questionIndex)),
+		)
+	}
+
+	buttonRows = append(buttonRows, navigationRow)
 
 	keyboard := tu.InlineKeyboard(buttonRows...)
 
