@@ -97,6 +97,12 @@ func Telegram(ctx context.Context, botToken string, database *Database.DB) error
 					log.Println(flats)
 					return flats
 				}
+			case "/favorites":
+				favorites := actions.ShowFavoriteFlats(action)
+				if favorites != nil {
+					log.Println(favorites)
+					return favorites
+				}
 			default:
 				handled, err := actions.HandleManualParameterMessage(action)
 				if err != nil {

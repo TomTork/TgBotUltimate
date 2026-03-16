@@ -26,6 +26,7 @@ type FlatFilter struct {
 }
 
 type Query struct {
+	FlatCode        *string
 	ProjectName     *string
 	City            *string
 	District        *string

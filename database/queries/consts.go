@@ -47,6 +47,11 @@ var UserExpertSystemAnswersValues = func(answer Database.ExpertSystemAnswer) []i
 	return []interface{}{answer.UserTgID, answer.QuestionID, answer.VariantIndex}
 }
 
+var UserFavoriteFlatsFields = []string{"user_tg_id", "flat_code"}
+var UserFavoriteFlatsValues = func(favorite Database.FavoriteFlat) []interface{} {
+	return []interface{}{favorite.UserTgID, favorite.FlatCode}
+}
+
 var MessagesFields = []string{"tg_id", "message", "project_name", "building_liter", "floor_min", "floor_max", "rooms_amount_min", "rooms_amount_max", "square_min", "square_max", "cost_min", "cost_max"}
 var MessagesValues = func(message Database.ChatMessage) []interface{} {
 	if message.ProjectName == "<UNK>" {

@@ -33,5 +33,13 @@ func CallbackQuery(action Action.Action) {
 		if err := ShowMoreFlats(action); err != nil {
 			log.Println("show_more_flats error:", err)
 		}
+	case data == ShowFavoriteFlatsPrefix:
+		if err := ShowFavoriteFlats(action); err != nil {
+			log.Println("show_favorite_flats error:", err)
+		}
+	case strings.HasPrefix(data, ToggleFavoriteFlatPrefix+":"):
+		if err := ToggleFavoriteFlat(action); err != nil {
+			log.Println("toggle_favorite_flat error:", err)
+		}
 	}
 }

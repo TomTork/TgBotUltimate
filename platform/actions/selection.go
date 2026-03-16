@@ -2,6 +2,7 @@ package actions
 
 import (
 	"TgBotUltimate/database/data"
+	"TgBotUltimate/database/favorites"
 	"TgBotUltimate/database/messages"
 	"TgBotUltimate/database/users"
 	"TgBotUltimate/processing"
@@ -11,9 +12,14 @@ import (
 	"fmt"
 	"github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
+	"strings"
 )
 
-const ShowMoreFlatsPrefix = "show_more_flats"
+const (
+	ShowMoreFlatsPrefix      = "show_more_flats"
+	ShowFavoriteFlatsPrefix  = "show_favorite_flats"
+	ToggleFavoriteFlatPrefix = "toggle_favorite_flat"
+)
 
 func Selection(a Action.Action) error {
 	n, err := neuro.Parameters(a.Ctx, a.Update.Message.Text)
@@ -63,6 +69,83 @@ func ShowMoreFlats(a Action.Action) error {
 	return sendFlatsByUser(a, user, a.Update.CallbackQuery.Message.GetChat().ID, true)
 }
 
+func ToggleFavoriteFlat(a Action.Action) error {
+	if a.Update.CallbackQuery == nil || a.Update.CallbackQuery.Message == nil {
+		return nil
+	}
+
+	callback := a.Update.CallbackQuery
+	if err := answerShowMoreCallback(a); err != nil {
+		return err
+	}
+	if err := ensureCallbackUser(a); err != nil {
+		return err
+	}
+
+	parts := strings.Split(callback.Data, ":")
+	if len(parts) != 3 {
+		return nil
+	}
+
+	flatCode := parts[1]
+	desiredState := parts[2]
+
+	switch desiredState {
+	case "add":
+		if err := favorites.AddFavorite(a.ReqCtx, a.Database, callback.From.ID, flatCode); err != nil {
+			return err
+		}
+	case "remove":
+		if err := favorites.RemoveFavorite(a.ReqCtx, a.Database, callback.From.ID, flatCode); err != nil {
+			return err
+		}
+	default:
+		return nil
+	}
+
+	_, err := a.Bot.EditMessageReplyMarkup(a.ReqCtx, &telego.EditMessageReplyMarkupParams{
+		ChatID:      tu.ID(callback.Message.GetChat().ID),
+		MessageID:   callback.Message.GetMessageID(),
+		ReplyMarkup: favoriteFlatKeyboard(flatCode, desiredState == "add"),
+	})
+	return err
+}
+
+func ShowFavoriteFlats(a Action.Action) error {
+	var userID int64
+	var chatID int64
+
+	if a.Update.CallbackQuery != nil && a.Update.CallbackQuery.Message != nil {
+		if err := answerShowMoreCallback(a); err != nil {
+			return err
+		}
+		if err := ensureCallbackUser(a); err != nil {
+			return err
+		}
+		userID = a.Update.CallbackQuery.From.ID
+		chatID = a.Update.CallbackQuery.Message.GetChat().ID
+	} else if a.Update.Message != nil && a.Update.Message.From != nil {
+		userID = a.Update.Message.From.ID
+		chatID = a.Update.Message.Chat.ID
+	} else {
+		return nil
+	}
+
+	flats, err := favorites.GetFavoriteFlatsByUser(a.ReqCtx, a.Database, userID)
+	if err != nil {
+		return err
+	}
+	if len(flats) == 0 {
+		_, err = a.Bot.SendMessage(
+			a.Ctx,
+			tu.Message(tu.ID(chatID), "В избранном пока нет планировок."),
+		)
+		return err
+	}
+
+	return sendFlatCards(a, userID, chatID, flats, true, nil)
+}
+
 func sendFlatsByUser(a Action.Action, user *Database.User, chatID int64, increaseOffset bool) error {
 	if user == nil {
 		return nil
@@ -76,28 +159,8 @@ func sendFlatsByUser(a Action.Action, user *Database.User, chatID int64, increas
 		return sendNoFlatsFound(a, user, chatID)
 	}
 
-	sentFlats := 0
-	for _, flat := range flats {
-		show, flatImg, _ := processing.ShowFlat(flat)
-		if flatImg == "" {
-			continue
-		}
-
-		_, err = a.Bot.SendPhoto(
-			a.Ctx,
-			tu.Photo(
-				tu.ID(chatID),
-				tu.FileFromURL(flatImg),
-			).WithCaption(show),
-		)
-		if err != nil {
-			return err
-		}
-		sentFlats++
-	}
-
-	if sentFlats == 0 {
-		return sendNoFlatsFound(a, user, chatID)
+	if err := sendFlatCards(a, *user.TgId, chatID, flats, false, user); err != nil {
+		return err
 	}
 
 	_, err = a.Bot.SendMessage(
@@ -113,6 +176,49 @@ func sendFlatsByUser(a Action.Action, user *Database.User, chatID int64, increas
 
 	if increaseOffset {
 		return users.IncreaseUserOffset(a.Ctx, a.Database, *user.TgId)
+	}
+
+	return nil
+}
+
+func sendFlatCards(a Action.Action, userID int64, chatID int64, flats []Database.Query, favoritesOnly bool, user *Database.User) error {
+	sentFlats := 0
+	for _, flat := range flats {
+		show, flatImg, _ := processing.ShowFlat(flat)
+		if flatImg == "" {
+			continue
+		}
+		if flat.FlatCode == nil || *flat.FlatCode == "" {
+			continue
+		}
+
+		isFavorite, err := favorites.IsFavorite(a.ReqCtx, a.Database, userID, *flat.FlatCode)
+		if err != nil {
+			return err
+		}
+
+		_, err = a.Bot.SendPhoto(
+			a.Ctx,
+			tu.Photo(
+				tu.ID(chatID),
+				tu.FileFromURL(flatImg),
+			).WithCaption(show).WithReplyMarkup(favoriteFlatKeyboard(*flat.FlatCode, isFavorite)),
+		)
+		if err != nil {
+			return err
+		}
+		sentFlats++
+	}
+
+	if sentFlats == 0 {
+		if favoritesOnly {
+			_, err := a.Bot.SendMessage(
+				a.Ctx,
+				tu.Message(tu.ID(chatID), "В избранном нет доступных планировок с изображением."),
+			)
+			return err
+		}
+		return sendNoFlatsFound(a, user, chatID)
 	}
 
 	return nil
@@ -142,7 +248,26 @@ func showMoreKeyboard() *telego.InlineKeyboardMarkup {
 			tu.InlineKeyboardButton("Показать ещё").WithCallbackData(ShowMoreFlatsPrefix),
 		),
 		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("Показать избранное").WithCallbackData(ShowFavoriteFlatsPrefix),
+		),
+		tu.InlineKeyboardRow(
 			tu.InlineKeyboardButton("Сбросить параметры").WithCallbackData(ExpertResetPrefix),
+		),
+	)
+}
+
+func favoriteFlatKeyboard(flatCode string, isFavorite bool) *telego.InlineKeyboardMarkup {
+	if isFavorite {
+		return tu.InlineKeyboard(
+			tu.InlineKeyboardRow(
+				tu.InlineKeyboardButton("Удалить из избранного").WithCallbackData(ToggleFavoriteFlatPrefix + ":" + flatCode + ":remove"),
+			),
+		)
+	}
+
+	return tu.InlineKeyboard(
+		tu.InlineKeyboardRow(
+			tu.InlineKeyboardButton("Добавить в избранное").WithCallbackData(ToggleFavoriteFlatPrefix + ":" + flatCode + ":add"),
 		),
 	)
 }

@@ -22,6 +22,7 @@ func GetFlatsByParameters(ctx context.Context, db *Database.DB, user *Database.U
 	for rows.Next() {
 		var query Database.Query
 		err = rows.Scan(
+			&query.FlatCode,
 			&query.ProjectName,
 			&query.City,
 			&query.District,

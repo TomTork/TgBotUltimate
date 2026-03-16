@@ -13,6 +13,7 @@ func SetCommands(action Action.Action) {
 		{Command: "questions", Description: "Пройти уточняющие вопросы"},
 		{Command: "reload", Description: "Сбросить параметры"},
 		{Command: "flats", Description: "Начать подбор квартиры"},
+		{Command: "favorites", Description: "Показать избранные планировки"},
 	}
 	err := action.Bot.SetMyCommands(action.Ctx, &telego.SetMyCommandsParams{
 		Commands: commands,

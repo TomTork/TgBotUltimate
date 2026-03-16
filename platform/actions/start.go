@@ -31,7 +31,8 @@ func Start(action Action.Action) error {
 				"/help — Как это работает\n"+
 				"/questions — Пройти перечень уточняющих вопросов\n"+
 				"/reload — Сбросить параметры подбора\n"+
-				"/flats — Начать подбор квартир",
+				"/flats — Начать подбор квартир\n"+
+				"/favorites — Показать избранные планировки",
 		).WithReplyMarkup(buttons),
 	)
 	if err != nil {

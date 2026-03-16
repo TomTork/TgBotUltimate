@@ -35,11 +35,13 @@ func NewDatabase(ctx context.Context) (*Database.DB, error) {
 		queries.CreateTagsTable,
 		queries.CreateExpertSystemTable,
 		queries.CreateUserExpertSystemAnswersTable,
+		queries.CreateUserFavoriteFlatsTable,
 		queries.CreateMessagesTgIdCreatedAtIndex,
 		queries.CreateBuildingsIndex,
 		queries.CreateFlatsIndex,
 		queries.CreateTagsIndex,
 		queries.CreateInfoIndex,
+		queries.CreateUserFavoriteFlatsIndex,
 	}
 
 	for _, stmt := range stmts {

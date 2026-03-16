@@ -184,14 +184,36 @@ CREATE TABLE IF NOT EXISTS user_expert_system_answers (
 );
 `
 
+const CreateUserFavoriteFlatsTable = `
+CREATE TABLE IF NOT EXISTS user_favorite_flats (
+    id SERIAL PRIMARY KEY,
+    user_tg_id BIGINT NOT NULL,
+    flat_code VARCHAR(63) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    CONSTRAINT fk_user_favorite_flats_user
+        FOREIGN KEY (user_tg_id)
+        REFERENCES users(tg_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_user_favorite_flats_flat
+        FOREIGN KEY (flat_code)
+        REFERENCES flats(code)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT uq_user_favorite_flats UNIQUE (user_tg_id, flat_code)
+);
+`
+
 const CreateMessagesTgIdCreatedAtIndex = `CREATE INDEX IF NOT EXISTS idx_messages_tg_id_created_at ON messages(tg_id, created_at ASC);`
 const CreateBuildingsIndex = `CREATE INDEX IF NOT EXISTS idx_buildings_project_code ON buildings(project_code);`
 const CreateFlatsIndex = `CREATE INDEX IF NOT EXISTS idx_flats_building_code ON flats(building_code);`
 const CreateTagsIndex = `CREATE INDEX IF NOT EXISTS idx_tags_flat_code ON tags(flat_code);`
 const CreateInfoIndex = `CREATE INDEX IF NOT EXISTS idx_info_project_code ON info(project_code);`
+const CreateUserFavoriteFlatsIndex = `CREATE INDEX IF NOT EXISTS idx_user_favorite_flats_user_tg_id_created_at ON user_favorite_flats(user_tg_id, created_at DESC);`
 
 const FlatsQuery = `
 SELECT
+f.code as flat_code,
 p.name as project_name,
 p.city,
 p.district,
