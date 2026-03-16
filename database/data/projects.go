@@ -16,6 +16,8 @@ func GetProjectByCode(ctx context.Context, db *Database.DB, code string) (*Datab
 		&project.City,
 		&project.District,
 		&project.AddressOffice,
+		&project.PhoneNumber,
+		&project.Site,
 	)
 	if err != nil {
 		return nil, err

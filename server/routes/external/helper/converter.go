@@ -7,8 +7,13 @@ import (
 
 func ConvertProjectToType1C(project Sync1C.TypeProject) Sync.Project {
 	return Sync.Project{
-		Code: &project.ProjectId,
-		Name: &project.ProjectName,
+		Code:          &project.ProjectId,
+		Name:          &project.ProjectName,
+		City:          &project.City,
+		District:      &project.District,
+		AddressOffice: &project.AddressOffice,
+		PhoneNumber:   &project.PhoneNumber,
+		Site:          &project.Site,
 	}
 }
 

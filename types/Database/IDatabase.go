@@ -11,6 +11,8 @@ type IProject struct {
 	City          *string
 	District      *string
 	AddressOffice *string
+	PhoneNumber   *string
+	Site          *string
 }
 
 type IProjectInfo struct {

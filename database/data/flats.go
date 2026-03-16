@@ -27,6 +27,8 @@ func GetFlatsByParameters(ctx context.Context, db *Database.DB, user *Database.U
 			&query.City,
 			&query.District,
 			&query.AddressOffice,
+			&query.PhoneNumber,
+			&query.Site,
 			&query.BuildingAddress,
 			&query.BuildingName,
 			&query.FlatNumber,

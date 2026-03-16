@@ -59,7 +59,9 @@ CREATE TABLE IF NOT EXISTS projects (
     name VARCHAR(255),
     city VARCHAR(63),
     district VARCHAR(63),
-    address_office VARCHAR(255)
+    address_office VARCHAR(255),
+    phone_number VARCHAR(12),
+    site VARCHAR(63)
 );
 `
 
@@ -218,6 +220,8 @@ p.name as project_name,
 p.city,
 p.district,
 p.address_office,
+p.phone_number,
+p.site,
 b.building_address,
 b.name as building_name,
 f.flat_number,

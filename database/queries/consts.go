@@ -100,9 +100,17 @@ var MessagesValues = func(message Database.ChatMessage) []interface{} {
 	}
 }
 
-var ProjectsFields = []string{"code", "name"}
+var ProjectsFields = []string{"code", "name", "city", "district", "address_office", "phone_number", "site"}
 var ProjectsValues = func(project Sync.Project) []interface{} {
-	return []interface{}{*project.Code, *project.Name}
+	return []interface{}{
+		*project.Code,
+		*project.Name,
+		helper.SafeNil(project.City),
+		helper.SafeNil(project.District),
+		helper.SafeNil(project.AddressOffice),
+		helper.SafeNil(project.PhoneNumber),
+		helper.SafeNil(project.Site),
+	}
 }
 
 var BuildingsFields = []string{"code", "name", "project_code", "liter"}

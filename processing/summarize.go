@@ -6,6 +6,7 @@ import (
 	"TgBotUltimate/types/Database"
 	"context"
 	"fmt"
+	"html"
 	"os"
 	"strconv"
 	"strings"
@@ -160,15 +161,6 @@ func ShowFlat(flat Database.Query) (string, string, string) {
 	if flat.ProjectName != nil {
 		result = append(result, fmt.Sprintf("Проект: %s", *flat.ProjectName))
 	}
-	if flat.City != nil {
-		result = append(result, fmt.Sprintf("Город: %s", *flat.City))
-	}
-	if flat.District != nil {
-		result = append(result, fmt.Sprintf("Район: %s", *flat.District))
-	}
-	if flat.AddressOffice != nil {
-		result = append(result, fmt.Sprintf("Адрес офиса: %s", *flat.AddressOffice))
-	}
 	if flat.BuildingAddress != nil {
 		result = append(result, fmt.Sprintf("Адрес здания: %s", *flat.BuildingAddress))
 	}
@@ -185,15 +177,25 @@ func ShowFlat(flat Database.Query) (string, string, string) {
 		result = append(result, fmt.Sprintf("Этаж: %d", *flat.Floor))
 	}
 	if flat.TotalSquare != nil {
-		result = append(result, fmt.Sprintf("Общая площадь: %.2f", *flat.TotalSquare))
+		result = append(result, fmt.Sprintf("Общая площадь: %.2f м²", *flat.TotalSquare))
 	}
 	if flat.LivingSquare != nil {
-		result = append(result, fmt.Sprintf("Жилая площадь: %.2f", *flat.LivingSquare))
+		result = append(result, fmt.Sprintf("Жилая площадь: %.2f м²", *flat.LivingSquare))
 	}
 	if flat.Cost != nil && fullCost {
-		result = append(result, fmt.Sprintf("Цена: %.0f", *flat.Cost))
+		result = append(result, fmt.Sprintf("Цена: %.0f ₽", *flat.Cost))
 	} else if flat.Cost != nil && !fullCost && flat.TotalSquare != nil {
-		result = append(result, fmt.Sprintf("Цена: %.0f", *flat.Cost**flat.TotalSquare))
+		result = append(result, fmt.Sprintf("Цена: %.0f ₽", *flat.Cost**flat.TotalSquare))
+	}
+	if flat.City != nil && flat.District != nil && flat.AddressOffice != nil {
+		result = append(result, fmt.Sprintf("\n%s, %s, %s", *flat.City, *flat.District, *flat.AddressOffice))
+	}
+	if flat.PhoneNumber != nil {
+		result = append(result, fmt.Sprintf("%s", *flat.PhoneNumber))
+	}
+	if flat.Site != nil && strings.TrimSpace(*flat.Site) != "" {
+		siteURL := normalizeSiteURL(*flat.Site)
+		result = append(result, fmt.Sprintf(`<a href="%s">Подробнее на сайте</a>`, html.EscapeString(siteURL)))
 	}
 	var flatImg, floorImg string
 	if flat.FlatImg != nil {
@@ -207,4 +209,15 @@ func ShowFlat(flat Database.Query) (string, string, string) {
 		floorImg = ""
 	}
 	return strings.Join(result, "\n"), flatImg, floorImg
+}
+
+func normalizeSiteURL(site string) string {
+	trimmed := strings.TrimSpace(site)
+	if trimmed == "" {
+		return ""
+	}
+	if strings.HasPrefix(trimmed, "http://") || strings.HasPrefix(trimmed, "https://") {
+		return trimmed
+	}
+	return "https://" + trimmed
 }

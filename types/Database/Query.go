@@ -31,6 +31,8 @@ type Query struct {
 	City            *string
 	District        *string
 	AddressOffice   *string
+	PhoneNumber     *string
+	Site            *string
 	BuildingAddress *string
 	BuildingName    *string
 	FlatNumber      *int

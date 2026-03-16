@@ -202,7 +202,7 @@ func sendFlatCards(a Action.Action, userID int64, chatID int64, flats []Database
 			tu.Photo(
 				tu.ID(chatID),
 				tu.FileFromURL(flatImg),
-			).WithCaption(show).WithReplyMarkup(favoriteFlatKeyboard(*flat.FlatCode, isFavorite)),
+			).WithCaption(show).WithParseMode("HTML").WithReplyMarkup(favoriteFlatKeyboard(*flat.FlatCode, isFavorite)),
 		)
 		if err != nil {
 			return err

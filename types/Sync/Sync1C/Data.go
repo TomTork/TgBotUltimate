@@ -1,8 +1,13 @@
 package Sync1C
 
 type TypeProject struct {
-	ProjectId   string `json:"project_id"`
-	ProjectName string `json:"project_name"`
+	ProjectId     string `json:"project_id"`
+	ProjectName   string `json:"project_name"`
+	City          string `json:"city"`
+	District      string `json:"district"`
+	AddressOffice string `json:"address_office"`
+	PhoneNumber   string `json:"phone_number"`
+	Site          string `json:"site"`
 }
 
 type TypeHouse struct {

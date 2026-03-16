@@ -1,8 +1,13 @@
 package Sync
 
 type Project struct {
-	Code *string `json:"code"`
-	Name *string `json:"name"`
+	Code          *string `json:"code"`
+	Name          *string `json:"name"`
+	City          *string `json:"city"`
+	District      *string `json:"district"`
+	AddressOffice *string `json:"address_office"`
+	PhoneNumber   *string `json:"phone_number"`
+	Site          *string `json:"site"`
 }
 
 type Building struct {
