@@ -16,7 +16,7 @@ func CronTasks(ctx context.Context) error {
 		),
 		gocron.NewTask(
 			func() {
-				core.Feed(ctx)
+				core.Strapi(ctx)
 			},
 		),
 	)

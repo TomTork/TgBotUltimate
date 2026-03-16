@@ -23,7 +23,7 @@ from transformers import (
 # Labels
 ENTITY_TYPES = [
     "PROJECT",   # project_name
-    "LITER",     # building_liter (литер/корпус/секция — при желании расширишь)
+    "LITER",     # building_liter
     "FLOOR",     # floor
     "ROOMS",     # rooms
     "SQUARE",    # area
@@ -35,7 +35,7 @@ ID2LABEL = {i: l for l, i in LABEL2ID.items()}
 DEFAULT_TRAIN_JSON = "train_data.json"
 
 
-# Small demo dataset (spans)
+# Демо
 def demo_training_samples() -> List[Dict[str, Any]]:
     samples = []
 
@@ -337,7 +337,6 @@ def _merge_close_entities(text: str, ents: List[PredEntity], gap: int = 1) -> Li
     return merged
 
 
-# Postprocessing: parse into schema
 UNK = "<UNK>"
 
 ROOMS_WORD2NUM = {
